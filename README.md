@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Invenger Visitor Management System
+
+Enterprise-grade visitor management platform built with Next.js 16, PostgreSQL, Prisma, and JWT authentication.
+
+## Project Structure
+
+```
+├── app/                    # Next.js App Router (routes + API entry points)
+│   ├── api/                # REST API route handlers
+│   ├── (protected)/        # Authenticated pages
+│   └── login/              # Public login page
+├── backend/                # Server-side logic (data, auth, services)
+│   ├── prisma/             # Database schema, migrations, seed
+│   ├── services/           # Business logic layer
+│   ├── lib/                # Auth, Prisma client, API utilities
+│   ├── middleware/         # Auth helpers for route middleware
+│   ├── types/              # Shared TypeScript interfaces
+│   └── utils/              # Validation, helpers
+├── frontend/               # UI layer (components, features, hooks)
+│   ├── components/         # Reusable UI + layout components
+│   ├── features/           # Feature-specific UI modules
+│   └── hooks/              # Custom React hooks
+├── middleware.ts           # Next.js route protection
+└── public/                 # Static assets
+```
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router) + TypeScript
+- **UI:** Tailwind CSS + shadcn/ui
+- **Database:** PostgreSQL + Prisma ORM
+- **Auth:** JWT + bcrypt
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Update `DATABASE_URL` and `JWT_SECRET` in `.env`.
+
+### 3. Start database and apply schema
+
+```bash
+npx prisma dev -d
+npx prisma db push
+npm run db:seed
+```
+
+### 4. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Default Admin Credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Field    | Value                  |
+|----------|------------------------|
+| Email    | `admin@invenger.local` |
+| Password | `Admin@123`            |
 
-## Learn More
+## Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script            | Description                    |
+|-------------------|--------------------------------|
+| `npm run dev`     | Start development server       |
+| `npm run build`   | Generate Prisma client + build |
+| `npm run db:push` | Push schema to database        |
+| `npm run db:seed` | Seed default admin user        |
+| `npm run db:studio` | Open Prisma Studio         |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development Phases
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Phase 1 (Complete)
+- Authentication, layout, dashboard, database foundation
 
-## Deploy on Vercel
+### Phase 2 (In Progress)
+- Visitor model, validation, service layer
+- Visitor CRUD APIs, registration, list, edit, checkout (upcoming)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Important Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Do **not** run `npm audit fix --force` — it downgrades Next.js and breaks the project.
+- Start Prisma Dev (`npx prisma dev -d`) before running the app if using the local dev database.

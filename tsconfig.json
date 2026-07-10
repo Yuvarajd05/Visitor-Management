@@ -19,7 +19,17 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/backend/*": ["./backend/*"],
+      "@/frontend/*": ["./frontend/*"],
+      "@/components/*": ["./frontend/components/*"],
+      "@/features/*": ["./frontend/features/*"],
+      "@/hooks/*": ["./frontend/hooks/*"],
+      "@/lib/*": ["./backend/lib/*"],
+      "@/services/*": ["./backend/services/*"],
+      "@/types/*": ["./backend/types/*"],
+      "@/utils/*": ["./backend/utils/*"],
+      "@/middleware/*": ["./backend/middleware/*"]
     }
   },
   "include": [
