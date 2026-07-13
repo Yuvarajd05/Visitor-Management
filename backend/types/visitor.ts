@@ -5,12 +5,11 @@ export interface VisitorRecord {
   visitorCode: string;
   fullName: string;
   phone: string;
-  email: string | null;
   company: string;
   purpose: string;
   personToMeet: string;
-  idProofType: string;
-  idProofNumber: string;
+  idProofType: string | null;
+  idProofNumber: string | null;
   vehicleNumber: string | null;
   checkInTime: Date;
   checkOutTime: Date | null;
@@ -61,24 +60,22 @@ export interface VisitorListQuery {
 export interface CreateVisitorInput {
   fullName: string;
   phone: string;
-  email?: string;
   company: string;
   purpose: string;
   personToMeet: string;
-  idProofType: string;
-  idProofNumber: string;
+  idProofType?: string;
+  idProofNumber?: string;
   vehicleNumber?: string;
 }
 
 export interface UpdateVisitorInput {
   fullName?: string;
   phone?: string;
-  email?: string | null;
   company?: string;
   purpose?: string;
   personToMeet?: string;
-  idProofType?: string;
-  idProofNumber?: string;
+  idProofType?: string | null;
+  idProofNumber?: string | null;
   vehicleNumber?: string | null;
 }
 

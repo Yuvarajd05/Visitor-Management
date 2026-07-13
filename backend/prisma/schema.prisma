@@ -37,12 +37,11 @@ model Visitor {
   visitorCode    String        @unique
   fullName       String
   phone          String
-  email          String?
   company        String
   purpose        String
   personToMeet   String
-  idProofType    String
-  idProofNumber  String
+  idProofType    String?
+  idProofNumber  String?
   vehicleNumber  String?
   checkInTime    DateTime      @default(now())
   checkOutTime   DateTime?

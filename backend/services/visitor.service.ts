@@ -78,12 +78,11 @@ export async function createVisitor(
         visitorCode,
         fullName: input.fullName,
         phone: input.phone,
-        email: input.email ?? null,
         company: input.company,
         purpose: input.purpose,
         personToMeet: input.personToMeet,
-        idProofType: input.idProofType,
-        idProofNumber: input.idProofNumber,
+        idProofType: input.idProofType ?? null,
+        idProofNumber: input.idProofNumber ?? null,
         vehicleNumber: input.vehicleNumber ?? null,
         status: "CHECKED_IN",
         createdBy,
@@ -145,7 +144,6 @@ export async function updateVisitor(
 
   if (input.fullName !== undefined) data.fullName = input.fullName;
   if (input.phone !== undefined) data.phone = input.phone;
-  if (input.email !== undefined) data.email = input.email;
   if (input.company !== undefined) data.company = input.company;
   if (input.purpose !== undefined) data.purpose = input.purpose;
   if (input.personToMeet !== undefined) data.personToMeet = input.personToMeet;

@@ -52,7 +52,6 @@ export const visitorWithCreatorSelect = {
   visitorCode: true,
   fullName: true,
   phone: true,
-  email: true,
   company: true,
   purpose: true,
   personToMeet: true,

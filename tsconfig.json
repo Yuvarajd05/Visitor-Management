@@ -29,7 +29,8 @@
       "@/services/*": ["./backend/services/*"],
       "@/types/*": ["./backend/types/*"],
       "@/utils/*": ["./backend/utils/*"],
-      "@/middleware/*": ["./backend/middleware/*"]
+      "@/middleware/*": ["./backend/middleware/*"],
+      "@/frontend/*": ["./frontend/*"]
     }
   },
   "include": [

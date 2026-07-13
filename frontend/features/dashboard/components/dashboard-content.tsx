@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Building2, LogOut, UserPlus, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -46,10 +47,12 @@ export function DashboardContent() {
             Monitor visitor activity and launch quick actions from one place.
           </p>
         </div>
-        <Button className="bg-secondary hover:bg-secondary/90" disabled>
-          <UserPlus className="size-4" />
-          Register Visitor
-        </Button>
+        <Link href="/visitors/new">
+          <Button className="bg-secondary hover:bg-secondary/90">
+            <UserPlus className="size-4" />
+            Register Visitor
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
