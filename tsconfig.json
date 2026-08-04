@@ -13,33 +13,20 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/backend/*": ["./backend/*"],
-      "@/frontend/*": ["./frontend/*"],
-      "@/components/*": ["./frontend/components/*"],
-      "@/features/*": ["./frontend/features/*"],
-      "@/hooks/*": ["./frontend/hooks/*"],
-      "@/lib/*": ["./backend/lib/*"],
-      "@/services/*": ["./backend/services/*"],
-      "@/types/*": ["./backend/types/*"],
-      "@/utils/*": ["./backend/utils/*"],
-      "@/middleware/*": ["./backend/middleware/*"],
-      "@/frontend/*": ["./frontend/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "prisma/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "storage"]
 }

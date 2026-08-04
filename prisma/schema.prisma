@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/server/prisma/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  SECURITY
+}
+
+enum VisitorStatus {
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  name                String
+  email               String              @unique
+  password            String
+  role                Role                @default(SECURITY)
+  mustChangePassword  Boolean             @default(false)
+  isActive            Boolean             @default(true)
+  failedLoginAttempts Int                 @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  visitors            Visitor[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model Employee {
+  id           String   @id @default(cuid())
+  employeeCode String   @unique
+  fullName     String
+  email        String?  @unique
+  phone        String
+  department   String
+  designation  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([fullName])
+  @@index([department])
+  @@index([isActive])
+  @@map("employees")
+}
+
+model Visitor {
+  id            String        @id @default(cuid())
+  visitorCode   String        @unique
+  fullName      String
+  phone         String
+  company       String?
+  purpose       String
+  personToMeet  String
+  idProofType   String?
+  idProofNumber String?
+  vehicleNumber String?
+  photoUrl      String?
+  checkInTime   DateTime      @default(now())
+  checkOutTime  DateTime?
+  status        VisitorStatus @default(CHECKED_IN)
+  createdBy     String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([fullName])
+  @@index([phone])
+  @@index([checkInTime])
+  @@map("visitors")
+}
+
+model SystemSettings {
+  id                       String   @id @default("default")
+  companyName              String   @default("Invenger")
+  sessionTimeoutMinutes    Int      @default(10080)
+  passwordMinLength        Int      @default(8)
+  passwordRequireUpper     Boolean  @default(true)
+  passwordRequireLower     Boolean  @default(true)
+  passwordRequireNumber    Boolean  @default(true)
+  passwordRequireSpecial   Boolean  @default(false)
+  maxFailedLogins          Int      @default(5)
+  lockoutMinutes           Int      @default(15)
+  rateLimitWindowMinutes   Int      @default(15)
+  rateLimitMaxAttempts     Int      @default(20)
+  smtpHost                 String?
+  smtpPort                 Int      @default(587)
+  smtpSecure               Boolean  @default(false)
+  smtpUser                 String?
+  smtpPass                 String?
+  smtpFrom                 String?
+  adminNotificationEmail   String?
+  notifyHostOnCheckIn      Boolean  @default(true)
+  notifyHostOnCheckOut     Boolean  @default(false)
+  notifyAdminOnCheckIn     Boolean  @default(true)
+  notifyAdminOnCheckOut    Boolean  @default(true)
+  updatedAt                DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+  actorId    String?
+  actorEmail String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType])
+  @@index([action])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+model ErrorLog {
+  id         String   @id @default(cuid())
+  message    String
+  stack      String?
+  path       String?
+  method     String?
+  statusCode Int?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("error_logs")
+}

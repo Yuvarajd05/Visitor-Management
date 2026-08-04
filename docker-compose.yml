@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: invenger
+      POSTGRES_PASSWORD: invenger
+      POSTGRES_DB: invenger_vms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invenger -d invenger_vms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://invenger:invenger@db:5432/invenger_vms?schema=public
+      JWT_SECRET: change-me-in-production-use-a-long-random-string
+      JWT_EXPIRES_IN: 7d
+      JWT_REMEMBER_ME_EXPIRES_IN: 7d
+      NEXT_PUBLIC_APP_NAME: Invenger Visitor Management System
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - visitor_storage:/app/storage
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:
+  visitor_storage:
