@@ -12,6 +12,19 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not configured.");
 }
 
+const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim();
+const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+if (!adminEmail || !adminPassword) {
+  throw new Error(
+    "Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in your .env before running the seed.",
+  );
+}
+
+if (adminPassword.length < 8) {
+  throw new Error("SEED_ADMIN_PASSWORD must be at least 8 characters.");
+}
+
 const pool = new Pool({
   connectionString,
   connectionTimeoutMillis: 5_000,
@@ -20,31 +33,29 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const adminEmail = "admin@invenger.local";
-  const adminPassword = "Admin@123";
-
-  const hashedPassword = await hashPassword(adminPassword);
+  const hashedPassword = await hashPassword(adminPassword!);
 
   await prisma.user.upsert({
-    where: { email: adminEmail },
+    where: { email: adminEmail! },
     update: {
       name: "Administrator",
       password: hashedPassword,
       role: "ADMIN",
-      mustChangePassword: false,
+      mustChangePassword: true,
       isActive: true,
     },
     create: {
       name: "Administrator",
-      email: adminEmail,
+      email: adminEmail!,
       password: hashedPassword,
       role: "ADMIN",
-      mustChangePassword: false,
+      mustChangePassword: true,
       isActive: true,
     },
   });
 
-  console.log("Seed completed: admin user is ready.");
+  console.log(`Seed completed: admin user ready (${adminEmail}).`);
+  console.log("Change the password after first login.");
 }
 
 main()

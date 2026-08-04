@@ -105,7 +105,7 @@ export function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder="admin@invenger.local"
+              placeholder="you@company.com"
               autoComplete="email"
               aria-invalid={Boolean(errors.email)}
               {...register("email")}

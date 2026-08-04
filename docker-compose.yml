@@ -1,17 +1,18 @@
+# Copy to .env on the server and fill real values. Do not commit real secrets.
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: invenger
-      POSTGRES_PASSWORD: invenger
-      POSTGRES_DB: invenger_vms
+      POSTGRES_USER: ${POSTGRES_USER:-invenger}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-invenger_vms}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U invenger -d invenger_vms"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,13 +23,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://invenger:invenger@db:5432/invenger_vms?schema=public
-      JWT_SECRET: change-me-in-production-use-a-long-random-string
-      JWT_EXPIRES_IN: 7d
-      JWT_REMEMBER_ME_EXPIRES_IN: 7d
-      NEXT_PUBLIC_APP_NAME: Invenger Visitor Management System
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-invenger}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-invenger_vms}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_REMEMBER_ME_EXPIRES_IN: ${JWT_REMEMBER_ME_EXPIRES_IN:-7d}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Invenger Visitor Management System}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     volumes:

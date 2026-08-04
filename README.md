@@ -62,18 +62,14 @@ features/visitors/
 ```bash
 npm install
 cp .env.example .env
+# Edit .env — set DATABASE_URL, JWT_SECRET, and seed admin credentials
 npx prisma generate
 npx prisma migrate deploy   # or npm run db:push
 npm run db:seed
 npm run dev
 ```
 
-## Default admin
-
-| Field | Value |
-|-------|-------|
-| Email | `admin@invenger.local` |
-| Password | `Admin@123` |
+Admin login is created by the seed script using `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` from your local `.env` (never commit real credentials).
 
 ## Docker (Linux VPS)
 
