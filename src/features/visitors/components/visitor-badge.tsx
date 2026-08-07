@@ -15,6 +15,7 @@ import {
 
 interface VisitorBadgeProps {
   visitor: VisitorWithCreator;
+  autoPrint?: boolean;
 }
 
 const COMPANY_ADDRESS =
@@ -115,7 +116,7 @@ function setVisitorPassPageStyle(enabled: boolean) {
   }
 }
 
-export function VisitorBadge({ visitor }: VisitorBadgeProps) {
+export function VisitorBadge({ visitor, autoPrint = false }: VisitorBadgeProps) {
   useEffect(() => {
     const afterPrint = () => {
       document.body.classList.remove("printing-visitor-pass");
@@ -130,6 +131,22 @@ export function VisitorBadge({ visitor }: VisitorBadgeProps) {
       setVisitorPassPageStyle(false);
     };
   }, []);
+
+  useEffect(() => {
+    if (!autoPrint) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setVisitorPassPageStyle(true);
+      document.body.classList.add("printing-visitor-pass");
+      window.print();
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [autoPrint]);
 
   function handlePrint() {
     setVisitorPassPageStyle(true);

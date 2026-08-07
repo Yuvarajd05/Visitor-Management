@@ -32,6 +32,7 @@ import { getErrorMessage } from "@/server/utils/errors";
 
 interface VisitorDetailContentProps {
   visitorId: string;
+  autoPrint?: boolean;
 }
 
 function DetailItem({
@@ -51,8 +52,12 @@ function DetailItem({
   );
 }
 
-export function VisitorDetailContent({ visitorId }: VisitorDetailContentProps) {
+export function VisitorDetailContent({
+  visitorId,
+  autoPrint = false,
+}: VisitorDetailContentProps) {
   const router = useRouter();
+  const [shouldAutoPrint] = useState(autoPrint);
   const [visitor, setVisitor] = useState<VisitorWithCreator | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -75,6 +80,15 @@ export function VisitorDetailContent({ visitorId }: VisitorDetailContentProps) {
   useEffect(() => {
     void loadVisitor();
   }, [loadVisitor]);
+
+  useEffect(() => {
+    if (!shouldAutoPrint) {
+      return;
+    }
+
+    // Drop ?print=1 without remounting, so refresh does not reopen print.
+    window.history.replaceState(null, "", `/visitors/${visitorId}`);
+  }, [shouldAutoPrint, visitorId]);
 
   async function handleCheckout() {
     if (!visitor) {
@@ -234,7 +248,7 @@ export function VisitorDetailContent({ visitorId }: VisitorDetailContentProps) {
         </Card>
       </div>
 
-      <VisitorBadge visitor={visitor} />
+      <VisitorBadge visitor={visitor} autoPrint={shouldAutoPrint} />
 
       <VisitorDeleteDialog
         open={showDeleteDialog}

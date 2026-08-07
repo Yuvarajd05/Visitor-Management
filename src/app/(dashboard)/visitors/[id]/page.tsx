@@ -8,10 +8,18 @@ export const metadata: Metadata = {
 
 export default async function VisitorDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ print?: string }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
 
-  return <VisitorDetailContent visitorId={id} />;
+  return (
+    <VisitorDetailContent
+      visitorId={id}
+      autoPrint={query.print === "1"}
+    />
+  );
 }

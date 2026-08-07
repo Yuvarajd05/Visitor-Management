@@ -101,9 +101,7 @@ export function VisitorTable({
               onSortChange={onSortChange}
             />
             <TableHead className="hidden md:table-cell">Phone</TableHead>
-            <TableHead className="hidden lg:table-cell">Company</TableHead>
             <TableHead className="hidden xl:table-cell">Person To Meet</TableHead>
-            <TableHead className="hidden xl:table-cell">Purpose</TableHead>
             <SortableHeader
               label="Check-In"
               column="checkInTime"
@@ -130,14 +128,8 @@ export function VisitorTable({
               </TableCell>
               <TableCell>{visitor.fullName}</TableCell>
               <TableCell className="hidden md:table-cell">{visitor.phone}</TableCell>
-              <TableCell className="hidden lg:table-cell">
-                {visitor.company || "—"}
-              </TableCell>
               <TableCell className="hidden xl:table-cell">
                 {visitor.personToMeet}
-              </TableCell>
-              <TableCell className="hidden max-w-48 truncate xl:table-cell">
-                {visitor.purpose}
               </TableCell>
               <TableCell className="hidden lg:table-cell">
                 {formatDateTime(visitor.checkInTime)}

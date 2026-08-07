@@ -6,11 +6,12 @@ import {
   LogOut,
   MoreHorizontal,
   Pencil,
+  Printer,
   Trash2,
 } from "lucide-react";
 
 import type { VisitorListItem } from "@/types/visitor";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface VisitorRowActionsProps {
   visitor: VisitorListItem;
@@ -35,39 +37,52 @@ export function VisitorRowActions({
   const isCheckedOut = visitor.status === "CHECKED_OUT";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon-sm" aria-label="Open actions" />
-        }
+    <div className="inline-flex items-center justify-end gap-1">
+      <Link
+        href={`/visitors/${visitor.id}?print=1`}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+        aria-label={`Print pass for ${visitor.fullName}`}
+        title="Print pass"
       >
-        <MoreHorizontal className="size-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem render={<Link href={`/visitors/${visitor.id}`} />}>
-          <Eye className="size-4" />
-          View
-        </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href={`/visitors/${visitor.id}/edit`} />}>
-          <Pencil className="size-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={isCheckedOut || isCheckingOut}
-          onClick={() => onCheckout(visitor)}
+        <Printer className="size-4" />
+      </Link>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon-sm" aria-label="Open actions" />
+          }
         >
-          <LogOut className="size-4" />
-          {isCheckingOut ? "Checking out..." : "Check Out"}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => onDelete(visitor)}
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <MoreHorizontal className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem render={<Link href={`/visitors/${visitor.id}`} />}>
+            <Eye className="size-4" />
+            View
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={<Link href={`/visitors/${visitor.id}/edit`} />}
+          >
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={isCheckedOut || isCheckingOut}
+            onClick={() => onCheckout(visitor)}
+          >
+            <LogOut className="size-4" />
+            {isCheckingOut ? "Checking out..." : "Check Out"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => onDelete(visitor)}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
