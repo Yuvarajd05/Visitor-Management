@@ -223,21 +223,15 @@ export async function adminResetPassword(
   const hashedPassword = await hashPassword(temporaryPassword);
 
   const updated = await runUserTransaction(async (tx) => {
-    const nextUser = await tx.user.update({
+    return tx.user.update({
       where: { id: userId },
       data: {
         password: hashedPassword,
         mustChangePassword: true,
+        tokenVersion: { increment: 1 },
       },
       select: userSelect,
     });
-
-    await tx.passwordResetToken.updateMany({
-      where: { userId, usedAt: null },
-      data: { usedAt: new Date() },
-    });
-
-    return nextUser;
   });
 
   void actorId;

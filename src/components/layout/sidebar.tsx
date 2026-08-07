@@ -61,9 +61,9 @@ function SidebarNav({
 
 function SidebarBrand() {
   return (
-    <div className="flex items-center border-b border-sidebar-border bg-white px-4 py-4">
-      <Link href="/dashboard" className="block">
-        <BrandMark />
+    <div className="flex h-14 shrink-0 items-center border-b border-border bg-card px-4">
+      <Link href="/dashboard" className="flex items-center">
+        <BrandMark className="h-7" />
       </Link>
     </div>
   );
@@ -88,7 +88,7 @@ export function Sidebar({ user }: { user: AuthUser }) {
   }
 
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground print:hidden lg:flex lg:flex-col">
+    <aside className="hidden w-56 shrink-0 border-r border-border bg-sidebar text-sidebar-foreground print:hidden lg:flex lg:flex-col">
       <SidebarBrand />
       <SidebarNav role={user.role} />
     </aside>

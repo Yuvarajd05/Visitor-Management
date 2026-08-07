@@ -62,7 +62,7 @@ export function handleRouteError(
     userId: context?.userId,
   });
 
-  return apiError(getErrorMessage(error), 500);
+  return apiError("An unexpected error occurred.", 500);
 }
 
 export { UnauthorizedError, NotFoundError, ValidationError, ConflictError };

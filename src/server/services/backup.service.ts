@@ -12,6 +12,7 @@ export async function createBackup(actor: {
         id: true,
         name: true,
         email: true,
+        // Password hashes are required for restore round-trip; keep offline-only.
         password: true,
         role: true,
         mustChangePassword: true,
@@ -25,13 +26,21 @@ export async function createBackup(actor: {
     prisma.systemSettings.findUnique({ where: { id: "default" } }),
   ]);
 
+  const safeSettings = settings
+    ? {
+        ...settings,
+        // Never put SMTP credentials in downloadable backups.
+        smtpPass: null as string | null,
+      }
+    : settings;
+
   const payload = {
     version: 1,
     exportedAt: new Date().toISOString(),
     users,
     employees,
     visitors,
-    settings,
+    settings: safeSettings,
   };
 
   await writeAuditLog({
@@ -73,7 +82,6 @@ export async function restoreBackup(
   await prisma.$transaction(async (tx) => {
     await tx.visitor.deleteMany();
     await tx.employee.deleteMany();
-    await tx.passwordResetToken.deleteMany();
     await tx.auditLog.deleteMany();
     await tx.errorLog.deleteMany();
     await tx.user.deleteMany();
@@ -132,6 +140,7 @@ export async function restoreBackup(
             fullName: String(visitor.fullName),
             phone: String(visitor.phone),
             company: visitor.company ? String(visitor.company) : null,
+            address: visitor.address ? String(visitor.address) : null,
             purpose: String(visitor.purpose),
             personToMeet: String(visitor.personToMeet),
             idProofType: visitor.idProofType
@@ -140,9 +149,13 @@ export async function restoreBackup(
             idProofNumber: visitor.idProofNumber
               ? String(visitor.idProofNumber)
               : null,
+            vehicleType: visitor.vehicleType
+              ? String(visitor.vehicleType)
+              : null,
             vehicleNumber: visitor.vehicleNumber
               ? String(visitor.vehicleNumber)
               : null,
+            additionalMembers: Number(visitor.additionalMembers ?? 0),
             photoUrl: visitor.photoUrl ? String(visitor.photoUrl) : null,
             checkInTime: visitor.checkInTime
               ? new Date(String(visitor.checkInTime))
@@ -171,7 +184,7 @@ export async function restoreBackup(
           id: "default",
           companyName: String(data.settings.companyName ?? "Invenger"),
           sessionTimeoutMinutes: Number(
-            data.settings.sessionTimeoutMinutes ?? 10080,
+            data.settings.sessionTimeoutMinutes ?? 750,
           ),
           passwordMinLength: Number(data.settings.passwordMinLength ?? 8),
           passwordRequireUpper: Boolean(
@@ -227,7 +240,7 @@ export async function restoreBackup(
         update: {
           companyName: String(data.settings.companyName ?? "Invenger"),
           sessionTimeoutMinutes: Number(
-            data.settings.sessionTimeoutMinutes ?? 10080,
+            data.settings.sessionTimeoutMinutes ?? 750,
           ),
           passwordMinLength: Number(data.settings.passwordMinLength ?? 8),
           passwordRequireUpper: Boolean(
@@ -258,9 +271,10 @@ export async function restoreBackup(
           smtpUser: data.settings.smtpUser
             ? String(data.settings.smtpUser)
             : null,
-          smtpPass: data.settings.smtpPass
-            ? String(data.settings.smtpPass)
-            : null,
+          // Omit when absent so redacted backups do not wipe the live SMTP password.
+          ...(data.settings.smtpPass
+            ? { smtpPass: String(data.settings.smtpPass) }
+            : {}),
           smtpFrom: data.settings.smtpFrom
             ? String(data.settings.smtpFrom)
             : null,

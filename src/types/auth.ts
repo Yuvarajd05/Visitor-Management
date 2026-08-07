@@ -13,6 +13,8 @@ export interface JWTPayload {
   email: string;
   name: string;
   role: Role;
+  /** Matches User.tokenVersion; absent/legacy tokens treated as 0. */
+  tokenVersion?: number;
 }
 
 export interface LoginRequest {

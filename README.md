@@ -26,7 +26,7 @@ invenger-vms/
 │   │   ├── auth/ validation/ prisma/ middleware/ mail/
 │   │   └── api/                 # Response helpers, requireAuth, errors
 │   ├── lib/ hooks/ types/ config/ utils/
-│   └── middleware.ts
+│   └── proxy.ts
 ├── public/
 ├── docs/ scripts/ deploy/
 ├── Dockerfile

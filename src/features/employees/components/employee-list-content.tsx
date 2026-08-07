@@ -6,13 +6,11 @@ import { Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import type { EmployeeListItem } from "@/types/employee";
-import {
-  EmployeeDeleteDialog,
-  EmployeeEmptyState,
-  EmployeePagination,
-  EmployeeTable,
-  EmployeeTableSkeleton,
-} from "@/features/employees/components";
+import { EmployeeDeleteDialog } from "@/features/employees/components/employee-delete-dialog";
+import { EmployeeEmptyState } from "@/features/employees/components/employee-empty-state";
+import { EmployeePagination } from "@/features/employees/components/employee-pagination";
+import { EmployeeTable } from "@/features/employees/components/employee-table";
+import { EmployeeTableSkeleton } from "@/features/employees/components/employee-table-skeleton";
 import {
   deleteEmployee,
   fetchEmployees,

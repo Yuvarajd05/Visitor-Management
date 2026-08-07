@@ -15,11 +15,14 @@ export const visitorWithCreatorSelect = {
   fullName: true,
   phone: true,
   company: true,
+  address: true,
   purpose: true,
   personToMeet: true,
   idProofType: true,
   idProofNumber: true,
+  vehicleType: true,
   vehicleNumber: true,
+  additionalMembers: true,
   photoUrl: true,
   checkInTime: true,
   checkOutTime: true,
@@ -128,6 +131,21 @@ export async function updateVisitorRecord(
     where: { id },
     data,
     select: visitorWithCreatorSelect,
+  });
+}
+
+/** Atomically check out only if still CHECKED_IN (prevents double-checkout races). */
+export async function checkoutVisitorIfCheckedIn(
+  id: string,
+  checkOutTime: Date,
+  db: DbClient = prisma,
+) {
+  return db.visitor.updateMany({
+    where: { id, status: "CHECKED_IN" },
+    data: {
+      status: "CHECKED_OUT",
+      checkOutTime,
+    },
   });
 }
 

@@ -13,16 +13,12 @@ import { getCurrentUser } from "@/server/auth/session";
 import {
   authenticateUser,
   changePassword,
-  requestPasswordReset,
-  resetPasswordWithToken,
 } from "@/server/services/auth.service";
 import { getSystemSettings } from "@/server/services/settings.service";
 import { checkRateLimit, getRequestIp } from "@/server/utils/rate-limit";
 import {
   changePasswordSchema,
-  forgotPasswordSchema,
   loginSchema,
-  resetPasswordSchema,
 } from "@/server/utils/validation";
 
 export async function loginController(request: Request) {
@@ -82,46 +78,8 @@ export async function meController() {
   return NextResponse.json({ user });
 }
 
-export async function forgotPasswordController(request: Request) {
-  const ip = getRequestIp(request);
-  const settings = await getSystemSettings();
-  const rate = checkRateLimit({
-    key: `forgot:${ip}`,
-    windowMs: settings.rateLimitWindowMinutes * 60_000,
-    maxAttempts: Math.max(5, Math.floor(settings.rateLimitMaxAttempts / 2)),
-  });
-
-  if (!rate.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: `Too many requests. Try again in ${rate.retryAfterSeconds} second(s).`,
-      },
-      { status: 429 },
-    );
-  }
-
-  const body = parseRequestBody(forgotPasswordSchema, await request.json());
-  const result = await requestPasswordReset(body.email);
-
-  return NextResponse.json({
-    success: true,
-    message: result.message,
-  });
-}
-
-export async function resetPasswordController(request: Request) {
-  const body = parseRequestBody(resetPasswordSchema, await request.json());
-  await resetPasswordWithToken(body.token, body.newPassword);
-
-  return NextResponse.json({
-    success: true,
-    message: "Password reset successfully. You can now sign in.",
-  });
-}
-
 export async function changePasswordController(request: Request) {
-  const user = await requireApiUser();
+  const user = await requireApiUser({ allowMustChangePassword: true });
   const body = parseRequestBody(changePasswordSchema, await request.json());
 
   await changePassword(user.id, body.currentPassword, body.newPassword);

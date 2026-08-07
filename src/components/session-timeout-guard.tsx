@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-const DEFAULT_TIMEOUT_MINUTES = 10080;
+/** 12 hours 30 minutes. */
+const DEFAULT_TIMEOUT_MINUTES = 750;
 
 export function SessionTimeoutGuard() {
   const router = useRouter();

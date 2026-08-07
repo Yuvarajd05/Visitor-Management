@@ -13,11 +13,13 @@ interface AppLayoutProps {
 export function AppLayout({ children, user }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-muted/30">
+      <div className="flex min-h-screen bg-[linear-gradient(165deg,#f1f5f9_0%,#eef4ff_42%,#f8fafc_100%)]">
         <Sidebar user={user} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar user={user} />
-          <main className="flex-1 p-4 md:p-6 print:p-0">{children}</main>
+          <main className="flex-1 p-4 md:p-6 print:bg-white print:p-0">
+            {children}
+          </main>
         </div>
       </div>
     </SidebarProvider>

@@ -1,10 +1,21 @@
 import { z } from "zod";
 
+/** Accepts a full email or a simple username (e.g. admin, security). */
+export const loginIdentifierSchema = z
+  .string()
+  .trim()
+  .min(1, "Email or username is required")
+  .max(120, "Email or username is too long")
+  .refine(
+    (value) =>
+      z.string().email().safeParse(value).success ||
+      /^[a-zA-Z0-9._+-]+$/.test(value),
+    "Enter a valid email or username",
+  )
+  .transform((value) => value.toLowerCase());
+
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
+  email: loginIdentifierSchema,
   password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean(),
 });
@@ -32,25 +43,5 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
-export const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-});
-
-export const resetPasswordSchema = z
-  .object({
-    token: z.string().min(1, "Reset token is required"),
-    newPassword: passwordSchema,
-    confirmPassword: z.string().min(1, "Please confirm your new password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
-export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
-export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

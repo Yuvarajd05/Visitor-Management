@@ -6,13 +6,11 @@ import { Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import type { VisitorListItem } from "@/types/visitor";
-import {
-  VisitorDeleteDialog,
-  VisitorEmptyState,
-  VisitorPagination,
-  VisitorTable,
-  VisitorTableSkeleton,
-} from "@/features/visitors/components";
+import { VisitorDeleteDialog } from "@/features/visitors/components/visitor-delete-dialog";
+import { VisitorEmptyState } from "@/features/visitors/components/visitor-empty-state";
+import { VisitorPagination } from "@/features/visitors/components/visitor-pagination";
+import { VisitorTable } from "@/features/visitors/components/visitor-table";
+import { VisitorTableSkeleton } from "@/features/visitors/components/visitor-table-skeleton";
 import {
   checkoutVisitor,
   deleteVisitor,

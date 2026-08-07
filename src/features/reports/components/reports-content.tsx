@@ -123,12 +123,12 @@ export function ReportsContent() {
     };
   }, []);
 
-  function handleExport() {
+  async function handleExport() {
     if (!result) {
       return;
     }
 
-    exportReportToExcel(result, buildReportFilename(result));
+    await exportReportToExcel(result, buildReportFilename(result));
     toast.success("Excel file downloaded.");
   }
 

@@ -5,23 +5,36 @@ import {
   requireApiAdmin,
   requireApiUser,
 } from "@/server/api";
+import type { Prisma } from "@/server/prisma/generated/client";
 import { sendTestEmail } from "@/server/mail";
 import { writeAuditLog } from "@/server/services/audit.service";
 import {
   getPublicSystemSettings,
   getSystemSettings,
+  toClientSystemSettings,
   updateSystemSettings,
 } from "@/server/services/settings.service";
 import {
   testEmailSchema,
   updateSystemSettingsSchema,
+  type UpdateSystemSettingsValues,
 } from "@/server/validation/system";
+
+function redactSettingsAuditMetadata(
+  body: UpdateSystemSettingsValues,
+): Prisma.InputJsonValue {
+  const metadata: Record<string, unknown> = { ...body };
+  if (metadata.smtpPass != null && metadata.smtpPass !== "") {
+    metadata.smtpPass = "[REDACTED]";
+  }
+  return metadata as Prisma.InputJsonValue;
+}
 
 export async function getSettingsController() {
   const user = await requireApiUser();
 
   if (user.role === "ADMIN") {
-    return apiSuccess(await getSystemSettings());
+    return apiSuccess(toClientSystemSettings(await getSystemSettings()));
   }
 
   return apiSuccess(await getPublicSystemSettings());
@@ -41,10 +54,13 @@ export async function updateSettingsController(request: Request) {
     summary: "System settings updated",
     actorId: admin.id,
     actorEmail: admin.email,
-    metadata: body,
+    metadata: redactSettingsAuditMetadata(body),
   });
 
-  return apiSuccess(settings, "Settings updated successfully.");
+  return apiSuccess(
+    toClientSystemSettings(settings),
+    "Settings updated successfully.",
+  );
 }
 
 export async function getPublicSettingsController() {

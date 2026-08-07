@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { passwordSchema } from "@/server/utils/validation";
+import {
+  loginIdentifierSchema,
+  passwordSchema,
+} from "@/server/utils/validation";
 
 export const createUserSchema = z.object({
   name: z
@@ -8,12 +11,7 @@ export const createUserSchema = z.object({
     .trim()
     .min(1, "Name is required")
     .max(120, "Name must be 120 characters or less"),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address")
-    .transform((value) => value.toLowerCase()),
+  email: loginIdentifierSchema,
   password: passwordSchema,
   role: z.enum(["ADMIN", "SECURITY"]),
   isActive: z.boolean().optional().default(true),
@@ -27,12 +25,7 @@ export const updateUserSchema = z.object({
     .min(1, "Name is required")
     .max(120, "Name must be 120 characters or less")
     .optional(),
-  email: z
-    .string()
-    .trim()
-    .email("Please enter a valid email address")
-    .transform((value) => value.toLowerCase())
-    .optional(),
+  email: loginIdentifierSchema.optional(),
   role: z.enum(["ADMIN", "SECURITY"]).optional(),
   isActive: z.boolean().optional(),
 });

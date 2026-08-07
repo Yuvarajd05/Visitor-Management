@@ -1,10 +1,6 @@
 export const AUTH_COOKIE_NAME = "invenger_auth_token";
 
-export const PUBLIC_ROUTES = [
-  "/login",
-  "/forgot-password",
-  "/reset-password",
-] as const;
+export const PUBLIC_ROUTES = ["/login"] as const;
 
 export const PROTECTED_ROUTES = [
   "/dashboard",

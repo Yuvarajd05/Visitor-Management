@@ -1,22 +1,84 @@
 import { z } from "zod";
 
-import { ID_PROOF_TYPES, PERSON_TO_MEET_OPTIONS } from "@/types/visitor";
+import {
+  ID_PROOF_TYPES,
+  PERSON_TO_MEET_OPTIONS,
+  PERSON_TO_MEET_OTHER_OPTION,
+  PURPOSE_OTHER_OPTION,
+  VEHICLE_TYPE_OPTIONS,
+  VEHICLE_TYPE_OTHER_OPTION,
+  VISITING_PURPOSE_OPTIONS,
+} from "@/types/visitor";
+import { isValidPhoneValue, parsePhoneValue } from "@/lib/country-codes";
 
 const phoneSchema = z
   .string()
   .trim()
   .min(1, "Phone number is required")
-  .regex(/^\d{10}$/, "Phone number must be exactly 10 digits");
+  .refine((value) => isValidPhoneValue(value), {
+    message:
+      "Enter a valid phone number (India: 10 digits; other countries: 6–12 digits)",
+  })
+  .transform((value) => {
+    const parsed = parsePhoneValue(value);
+    return parsed.e164 || value;
+  });
 
 const personToMeetSchema = z
   .string()
   .trim()
   .min(1, "Person to meet is required")
+  .max(120, "Person to meet must be 120 characters or less")
   .refine(
-    (value) =>
-      (PERSON_TO_MEET_OPTIONS as readonly string[]).includes(value),
+    (value) => {
+      if ((PERSON_TO_MEET_OPTIONS as readonly string[]).includes(value)) {
+        return true;
+      }
+      // Custom typed host: any non-empty text except the bare "Other" label
+      return value !== PERSON_TO_MEET_OTHER_OPTION;
+    },
     {
-      message: "Select a person from the list",
+      message: "Select a person from the list or enter a custom name",
+    },
+  );
+
+const purposeSchema = z
+  .string()
+  .trim()
+  .min(1, "Visiting reason is required")
+  .max(200, "Visiting reason must be 200 characters or less")
+  .refine(
+    (value) => {
+      if ((VISITING_PURPOSE_OPTIONS as readonly string[]).includes(value)) {
+        return true;
+      }
+      // Custom "Other" reasons: any non-empty text that is not the bare "Other" label
+      return value !== PURPOSE_OTHER_OPTION;
+    },
+    {
+      message: "Select a visiting reason or enter a custom reason",
+    },
+  );
+
+const optionalVehicleTypeSchema = z
+  .string()
+  .trim()
+  .max(80, "Vehicle type must be 80 characters or less")
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value === "" ? undefined : value))
+  .refine(
+    (value) => {
+      if (!value) {
+        return true;
+      }
+      if ((VEHICLE_TYPE_OPTIONS as readonly string[]).includes(value)) {
+        return true;
+      }
+      return value !== VEHICLE_TYPE_OTHER_OPTION;
+    },
+    {
+      message: "Select a vehicle type or enter a custom type",
     },
   );
 
@@ -32,6 +94,14 @@ const optionalCompanySchema = z
   .string()
   .trim()
   .max(120, "Company must be 120 characters or less")
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value === "" ? undefined : value));
+
+const optionalAddressSchema = z
+  .string()
+  .trim()
+  .max(250, "Address must be 250 characters or less")
   .optional()
   .or(z.literal(""))
   .transform((value) => (value === "" ? undefined : value));
@@ -75,11 +145,14 @@ export const createVisitorSchema = z.object({
   fullName: requiredText("Full name", 120),
   phone: phoneSchema,
   company: optionalCompanySchema,
-  purpose: requiredText("Purpose", 200),
+  address: optionalAddressSchema,
+  purpose: purposeSchema,
   personToMeet: personToMeetSchema,
   idProofType: optionalIdProofTypeSchema,
   idProofNumber: optionalIdProofNumberSchema,
+  vehicleType: optionalVehicleTypeSchema,
   vehicleNumber: optionalVehicleSchema,
+  additionalMembers: z.coerce.number().int().min(0).max(10).default(0),
   photoDataUrl: optionalPhotoDataUrlSchema,
 });
 
@@ -94,7 +167,15 @@ export const updateVisitorSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? null : value)),
-  purpose: requiredText("Purpose", 200).optional(),
+  address: z
+    .string()
+    .trim()
+    .max(250, "Address must be 250 characters or less")
+    .nullable()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? null : value)),
+  purpose: purposeSchema.optional(),
   personToMeet: personToMeetSchema.optional(),
   idProofType: z
     .union([z.enum(ID_PROOF_TYPES), z.literal(""), z.null()])
@@ -108,6 +189,28 @@ export const updateVisitorSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? null : value)),
+  vehicleType: z
+    .string()
+    .trim()
+    .max(80, "Vehicle type must be 80 characters or less")
+    .nullable()
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value === "" ? null : value))
+    .refine(
+      (value) => {
+        if (!value) {
+          return true;
+        }
+        if ((VEHICLE_TYPE_OPTIONS as readonly string[]).includes(value)) {
+          return true;
+        }
+        return value !== VEHICLE_TYPE_OTHER_OPTION;
+      },
+      {
+        message: "Select a vehicle type or enter a custom type",
+      },
+    ),
   vehicleNumber: z
     .string()
     .trim()
@@ -116,6 +219,7 @@ export const updateVisitorSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((value) => (value === "" ? null : value)),
+  additionalMembers: z.coerce.number().int().min(0).max(10).optional(),
   photoDataUrl: optionalPhotoDataUrlSchema.nullable().optional(),
 });
 

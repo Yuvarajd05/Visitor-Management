@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 import type { ReportResult } from "@/types/report";
 import { formatDateTime } from "@/lib/date";
 
@@ -7,7 +5,11 @@ function statusLabel(status: "CHECKED_IN" | "CHECKED_OUT"): string {
   return status === "CHECKED_IN" ? "Checked In" : "Checked Out";
 }
 
-export function exportReportToExcel(result: ReportResult, filename: string) {
+export async function exportReportToExcel(
+  result: ReportResult,
+  filename: string,
+) {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
 
   const visitorRows = result.rows.map((row) => ({

@@ -149,20 +149,23 @@
     visibility: visible !important;
   }
 
-  /* Envelope C5 printable area (~162×229mm); page size set via print style tag */
+  /* Envelope C5 printable area (~162×229mm); slightly under full width so side borders aren't clipped. */
   body.printing-visitor-pass .visitor-pass-sheet {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     margin: 0 auto;
-    width: 146mm;
+    width: 138mm;
+    max-width: 138mm;
+    box-sizing: border-box;
     font-family: Arial, Helvetica, sans-serif !important;
   }
 
   body.printing-visitor-pass .visitor-pass-card {
-    width: 146mm !important;
-    max-width: 146mm !important;
+    width: 100% !important;
+    max-width: 138mm !important;
+    box-sizing: border-box !important;
     box-shadow: none !important;
     border: 1px solid #000 !important;
     -webkit-print-color-adjust: exact;
@@ -170,7 +173,8 @@
   }
 
   body.printing-visitor-pass .visitor-pass-note {
-    width: 146mm;
+    width: 138mm;
+    max-width: 138mm;
     margin-left: auto;
     margin-right: auto;
     text-align: center !important;

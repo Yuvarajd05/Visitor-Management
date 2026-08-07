@@ -200,7 +200,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                         }
                       />
                       <p className="text-xs text-muted-foreground">
-                        Default 10080 (1 week) so reception stays signed in.
+                        Default 750 (12 hours 30 minutes).
                       </p>
                     </div>
                     <div className="space-y-1.5">

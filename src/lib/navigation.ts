@@ -5,7 +5,7 @@ import {
   Settings,
   UserCog,
   UserPlus,
-  Users,
+  // Users, // Employees — hidden for now
 } from "lucide-react";
 
 import type { Role } from "@/server/prisma/generated/client";
@@ -22,11 +22,12 @@ export const navigationItems: NavItem[] = [
     href: "/visitors",
     icon: UserPlus,
   },
-  {
-    title: "Employees",
-    href: "/employees",
-    icon: Users,
-  },
+  // Employees directory — not used for Person to Meet yet; re-enable when wired up.
+  // {
+  //   title: "Employees",
+  //   href: "/employees",
+  //   icon: Users,
+  // },
   {
     title: "Users",
     href: "/users",

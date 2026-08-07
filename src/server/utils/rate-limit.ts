@@ -37,10 +37,21 @@ export function checkRateLimit(input: {
 }
 
 export function getRequestIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
+  // Prefer nginx X-Real-IP ($remote_addr) — not client-spoofable when set at the edge.
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
   }
 
-  return request.headers.get("x-real-ip") ?? "unknown";
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    // When a trusted proxy appends the connecting IP, it is the rightmost hop.
+    const parts = forwarded
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[parts.length - 1] || "unknown";
+  }
+
+  return "unknown";
 }

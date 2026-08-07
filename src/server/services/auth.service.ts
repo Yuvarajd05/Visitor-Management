@@ -1,13 +1,6 @@
 import { prisma } from "@/server/prisma/client";
 import { signToken } from "@/server/auth/auth";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
-import {
-  buildPasswordResetUrl,
-  deliverPasswordResetLink,
-  generatePasswordResetToken,
-  getPasswordResetExpiry,
-  hashPasswordResetToken,
-} from "@/server/auth/password-reset";
 import { writeAuditLog } from "@/server/services/audit.service";
 import {
   assertPasswordPolicy,
@@ -115,6 +108,7 @@ export async function authenticateUser(
       email: user.email,
       name: user.name,
       role: user.role,
+      tokenVersion: user.tokenVersion,
     },
     credentials.rememberMe,
   );
@@ -132,7 +126,10 @@ export async function authenticateUser(
   return { user: authUser, token };
 }
 
-export async function getUserById(userId: string): Promise<AuthUser | null> {
+export async function getUserById(
+  userId: string,
+  expectedTokenVersion?: number,
+): Promise<AuthUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -142,10 +139,18 @@ export async function getUserById(userId: string): Promise<AuthUser | null> {
       role: true,
       mustChangePassword: true,
       isActive: true,
+      tokenVersion: true,
     },
   });
 
   if (!user || !user.isActive) {
+    return null;
+  }
+
+  if (
+    expectedTokenVersion !== undefined &&
+    user.tokenVersion !== expectedTokenVersion
+  ) {
     return null;
   }
 
@@ -183,6 +188,7 @@ export async function changePassword(
     data: {
       password: hashedPassword,
       mustChangePassword: false,
+      tokenVersion: { increment: 1 },
     },
     select: {
       id: true,
@@ -203,132 +209,4 @@ export async function changePassword(
   });
 
   return toAuthUser(updated);
-}
-
-/**
- * Always returns a generic success message to avoid account enumeration.
- */
-export async function requestPasswordReset(email: string): Promise<{
-  message: string;
-}> {
-  const normalizedEmail = email.toLowerCase().trim();
-  const genericMessage =
-    "If an account exists for that email, password reset instructions have been sent.";
-
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
-
-  if (!user || !user.isActive) {
-    return { message: genericMessage };
-  }
-
-  const rawToken = generatePasswordResetToken();
-  const tokenHash = hashPasswordResetToken(rawToken);
-  const expiresAt = getPasswordResetExpiry();
-
-  await prisma.$transaction([
-    prisma.passwordResetToken.updateMany({
-      where: {
-        userId: user.id,
-        usedAt: null,
-      },
-      data: {
-        usedAt: new Date(),
-      },
-    }),
-    prisma.passwordResetToken.create({
-      data: {
-        tokenHash,
-        userId: user.id,
-        expiresAt,
-      },
-    }),
-  ]);
-
-  const resetUrl = buildPasswordResetUrl(rawToken);
-  await deliverPasswordResetLink({
-    to: user.email,
-    name: user.name,
-    resetUrl,
-  });
-
-  await writeAuditLog({
-    action: "PASSWORD_RESET_REQUESTED",
-    entityType: "USER",
-    entityId: user.id,
-    summary: `Password reset requested for ${user.email}`,
-    actorEmail: user.email,
-  });
-
-  return { message: genericMessage };
-}
-
-export async function resetPasswordWithToken(
-  token: string,
-  newPassword: string,
-): Promise<void> {
-  const settings = await getSystemSettings();
-  const policyError = assertPasswordPolicy(newPassword, settings);
-  if (policyError) {
-    throw new AppError(policyError, 400);
-  }
-
-  const tokenHash = hashPasswordResetToken(token);
-
-  const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          isActive: true,
-        },
-      },
-    },
-  });
-
-  if (
-    !resetToken ||
-    resetToken.usedAt ||
-    resetToken.expiresAt.getTime() < Date.now() ||
-    !resetToken.user.isActive
-  ) {
-    throw new AppError("This reset link is invalid or has expired.", 400);
-  }
-
-  const hashedPassword = await hashPassword(newPassword);
-
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: resetToken.userId },
-      data: {
-        password: hashedPassword,
-        mustChangePassword: false,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-      },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
-    }),
-    prisma.passwordResetToken.updateMany({
-      where: {
-        userId: resetToken.userId,
-        usedAt: null,
-        id: { not: resetToken.id },
-      },
-      data: { usedAt: new Date() },
-    }),
-  ]);
-
-  await writeAuditLog({
-    action: "PASSWORD_RESET_COMPLETED",
-    entityType: "USER",
-    entityId: resetToken.userId,
-    summary: `Password reset completed for ${resetToken.user.email}`,
-    actorEmail: resetToken.user.email,
-  });
 }

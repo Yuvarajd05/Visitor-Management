@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { EmployeeListContent } from "@/features/employees/components";
+import { EmployeeListContent } from "@/features/employees/components/employee-list-content";
 
 export const metadata: Metadata = {
   title: "Employees | Invenger VMS",

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -75,9 +74,17 @@ export function LoginForm() {
         return;
       }
 
+      const rawRedirect = new URLSearchParams(window.location.search).get(
+        "redirect",
+      );
+      // Only same-origin relative paths — blocks open redirects (//evil, https://…).
       const redirectTo =
-        new URLSearchParams(window.location.search).get("redirect") ??
-        "/dashboard";
+        rawRedirect &&
+        rawRedirect.startsWith("/") &&
+        !rawRedirect.startsWith("//") &&
+        !rawRedirect.includes("://")
+          ? rawRedirect
+          : "/dashboard";
       router.push(redirectTo);
       router.refresh();
     } catch (error) {
@@ -101,12 +108,12 @@ export function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email / Username</Label>
             <Input
               id="email"
-              type="email"
-              placeholder="you@company.com"
-              autoComplete="email"
+              type="text"
+              placeholder="admin or security"
+              autoComplete="username"
               aria-invalid={Boolean(errors.email)}
               {...register("email")}
             />
@@ -116,15 +123,7 @@ export function LoginForm() {
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-secondary hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <PasswordInput
               id="password"
               placeholder="Enter your password"

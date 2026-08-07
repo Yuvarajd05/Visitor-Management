@@ -8,7 +8,7 @@ import type { UpdateSystemSettingsValues } from "@/server/validation/system";
 const DEFAULT_SETTINGS = {
   id: "default",
   companyName: "Invenger",
-  sessionTimeoutMinutes: 10080,
+  sessionTimeoutMinutes: 750,
   passwordMinLength: 8,
   passwordRequireUpper: true,
   passwordRequireLower: true,
@@ -59,10 +59,26 @@ export async function updateSystemSettings(
 ): Promise<SystemSettingsRecord> {
   await getSystemSettings();
 
+  // Empty/null smtpPass means "leave unchanged" so clients can omit the secret.
+  const data: UpdateSystemSettingsValues = { ...input };
+  if (data.smtpPass == null || data.smtpPass === "") {
+    delete data.smtpPass;
+  }
+
   return prisma.systemSettings.update({
     where: { id: "default" },
-    data: input,
+    data,
   });
+}
+
+/** Strip SMTP password before returning settings over the API. */
+export function toClientSystemSettings(
+  settings: SystemSettingsRecord,
+): SystemSettingsRecord {
+  return {
+    ...settings,
+    smtpPass: settings.smtpPass ? "" : null,
+  };
 }
 
 export function assertPasswordPolicy(

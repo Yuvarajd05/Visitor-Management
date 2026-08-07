@@ -1,8 +1,9 @@
-import type { Prisma, VisitorStatus } from "@/server/prisma/generated/client";
+import type { Prisma } from "@/server/prisma/generated/client";
 
 import { ConflictError, NotFoundError } from "@/server/api/errors";
 import {
   createVisitorRecord,
+  checkoutVisitorIfCheckedIn,
   deleteVisitorRecord,
   findVisitorById,
   generateNextVisitorCode,
@@ -85,11 +86,14 @@ export async function createVisitor(
       fullName: input.fullName,
       phone: input.phone,
       company: input.company ?? null,
+      address: input.address ?? null,
       purpose: input.purpose,
       personToMeet: input.personToMeet,
       idProofType: input.idProofType ?? null,
       idProofNumber: input.idProofNumber ?? null,
+      vehicleType: input.vehicleType ?? null,
       vehicleNumber: input.vehicleNumber ?? null,
+      additionalMembers: input.additionalMembers ?? 0,
       status: "CHECKED_IN",
       creator: { connect: { id: createdBy } },
     });
@@ -157,11 +161,16 @@ export async function updateVisitor(
   if (input.fullName !== undefined) data.fullName = input.fullName;
   if (input.phone !== undefined) data.phone = input.phone;
   if (input.company !== undefined) data.company = input.company;
+  if (input.address !== undefined) data.address = input.address;
   if (input.purpose !== undefined) data.purpose = input.purpose;
   if (input.personToMeet !== undefined) data.personToMeet = input.personToMeet;
   if (input.idProofType !== undefined) data.idProofType = input.idProofType;
   if (input.idProofNumber !== undefined) data.idProofNumber = input.idProofNumber;
+  if (input.vehicleType !== undefined) data.vehicleType = input.vehicleType;
   if (input.vehicleNumber !== undefined) data.vehicleNumber = input.vehicleNumber;
+  if (input.additionalMembers !== undefined) {
+    data.additionalMembers = input.additionalMembers;
+  }
 
   if (input.photoDataUrl === null) {
     await deleteVisitorPhotoFile(existing.photoUrl);
@@ -185,14 +194,14 @@ export async function deleteVisitor(id: string): Promise<void> {
 }
 
 export async function checkoutVisitor(id: string): Promise<VisitorWithCreator> {
-  const visitor = await getVisitorById(id);
+  const checkOutTime = new Date();
+  const result = await checkoutVisitorIfCheckedIn(id, checkOutTime);
 
-  if (visitor.status === ("CHECKED_OUT" satisfies VisitorStatus)) {
+  if (result.count === 0) {
+    // Distinguish missing visitor vs already checked out for stable API errors.
+    await getVisitorById(id);
     throw new ConflictError("This visitor has already been checked out.");
   }
 
-  return updateVisitorRecord(id, {
-    status: "CHECKED_OUT",
-    checkOutTime: new Date(),
-  });
+  return getVisitorById(id);
 }

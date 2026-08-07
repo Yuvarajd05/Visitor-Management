@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyToken } from "@/server/auth/auth";
 import { AUTH_COOKIE_NAME, PROTECTED_ROUTES } from "@/lib/constants";
-import { isAuthenticatedRequest } from "@/server/middleware/auth";
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_ROUTES.some(
@@ -10,10 +9,12 @@ function isProtectedRoute(pathname: string): boolean {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const isAuthenticated = await isAuthenticatedRequest(request);
+  // Verify JWT once per request (was previously verified twice).
+  const payload = token ? await verifyToken(token) : null;
+  const isAuthenticated = Boolean(payload);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
@@ -31,7 +32,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (token && !(await verifyToken(token))) {
+  if (token && !payload) {
     const response = NextResponse.next({
       request: { headers: requestHeaders },
     });
@@ -48,8 +49,6 @@ export const config = {
   matcher: [
     "/",
     "/login",
-    "/forgot-password",
-    "/reset-password",
     "/dashboard/:path*",
     "/visitors/:path*",
     "/employees/:path*",

@@ -2,7 +2,8 @@ import { SignJWT, jwtVerify } from "jose";
 
 import type { JWTPayload } from "@/types/auth";
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
+/** Default session: 12 hours 30 minutes. */
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "750m";
 const JWT_REMEMBER_ME_EXPIRES_IN =
   process.env.JWT_REMEMBER_ME_EXPIRES_IN ?? "7d";
 
@@ -74,6 +75,8 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
       email: payload.email,
       name: payload.name,
       role: payload.role,
+      tokenVersion:
+        typeof payload.tokenVersion === "number" ? payload.tokenVersion : 0,
     };
   } catch {
     return null;

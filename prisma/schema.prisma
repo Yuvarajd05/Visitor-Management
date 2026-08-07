@@ -25,30 +25,16 @@ model User {
   role                Role                @default(SECURITY)
   mustChangePassword  Boolean             @default(false)
   isActive            Boolean             @default(true)
+  /** Bumped on password change/reset so older JWTs stop resolving. */
+  tokenVersion        Int                 @default(0)
   failedLoginAttempts Int                 @default(0)
   lockedUntil         DateTime?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   visitors            Visitor[]
-  passwordResetTokens PasswordResetToken[]
   auditLogs           AuditLog[]
 
   @@map("users")
-}
-
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  userId    String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("password_reset_tokens")
 }
 
 model Employee {
@@ -75,11 +61,14 @@ model Visitor {
   fullName      String
   phone         String
   company       String?
+  address       String?
   purpose       String
   personToMeet  String
   idProofType   String?
   idProofNumber String?
+  vehicleType   String?
   vehicleNumber String?
+  additionalMembers Int          @default(0)
   photoUrl      String?
   checkInTime   DateTime      @default(now())
   checkOutTime  DateTime?
@@ -100,7 +89,7 @@ model Visitor {
 model SystemSettings {
   id                       String   @id @default("default")
   companyName              String   @default("Invenger")
-  sessionTimeoutMinutes    Int      @default(10080)
+  sessionTimeoutMinutes    Int      @default(750)
   passwordMinLength        Int      @default(8)
   passwordRequireUpper     Boolean  @default(true)
   passwordRequireLower     Boolean  @default(true)

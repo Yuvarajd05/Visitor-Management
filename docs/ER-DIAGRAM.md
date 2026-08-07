@@ -7,7 +7,6 @@ This ER diagram reflects the current PostgreSQL schema defined in `prisma/schema
 ```mermaid
 erDiagram
     USER ||--o{ VISITOR : "creates (createdBy)"
-    USER ||--o{ PASSWORD_RESET_TOKEN : "has"
 
     USER {
         string id PK
@@ -19,15 +18,6 @@ erDiagram
         boolean isActive
         datetime createdAt
         datetime updatedAt
-    }
-
-    PASSWORD_RESET_TOKEN {
-        string id PK
-        string tokenHash UK
-        string userId FK
-        datetime expiresAt
-        datetime usedAt "nullable"
-        datetime createdAt
     }
 
     VISITOR {
@@ -68,7 +58,6 @@ erDiagram
 | From | To | Type | Description |
 |------|----|------|-------------|
 | User | Visitor | 1 : N | One user can create many visitors. `createdBy` is a foreign key. If a user still has visitors, that user cannot be deleted (`onDelete: Restrict`). |
-| User | PasswordResetToken | 1 : N | One user can have many reset tokens. If a user is deleted, their tokens are deleted too (`onDelete: Cascade`). |
 | Employee | — | standalone | Employee is a separate directory table. Not linked to Visitor yet. `personToMeet` is stored as text. |
 
 ## Enums
@@ -79,14 +68,13 @@ erDiagram
 ## Backend review status
 
 **Correct / safe for current features:**
-- Primary keys and unique fields (`email`, `visitorCode`, `employeeCode`, `tokenHash`)
+- Primary keys and unique fields (`email`, `visitorCode`, `employeeCode`)
 - User → Visitor foreign key with Restrict (protects visitor history)
-- Password reset tokens store hashed token, not plain text
 - Optional fields match app rules (`company`, ID proof, employee email)
+- Password recovery is admin-initiated temporary password reset (no self-service forgot-password)
 
 **Not a bug (by design for now):**
 - Employee is not linked to Visitor (`personToMeet` is free text)
-- Forgot-password email is optional; Admin reset is the main flow
 
 **Future improvement (not broken today):**
 - Add optional `Visitor.employeeId` → `Employee.id` so “Person to Meet” comes from Employees

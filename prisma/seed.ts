@@ -12,18 +12,14 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not configured.");
 }
 
-const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim();
-const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-
-if (!adminEmail || !adminPassword) {
-  throw new Error(
-    "Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in your .env before running the seed.",
-  );
-}
-
-if (adminPassword.length < 8) {
-  throw new Error("SEED_ADMIN_PASSWORD must be at least 8 characters.");
-}
+const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? "admin").trim().toLowerCase();
+const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "123";
+const securityEmail = (
+  process.env.SEED_SECURITY_EMAIL ?? "security"
+)
+  .trim()
+  .toLowerCase();
+const securityPassword = process.env.SEED_SECURITY_PASSWORD ?? "123";
 
 const pool = new Pool({
   connectionString,
@@ -32,30 +28,55 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  const hashedPassword = await hashPassword(adminPassword!);
+async function upsertUser(input: {
+  email: string;
+  name: string;
+  password: string;
+  role: "ADMIN" | "SECURITY";
+}) {
+  const hashedPassword = await hashPassword(input.password);
 
   await prisma.user.upsert({
-    where: { email: adminEmail! },
+    where: { email: input.email },
     update: {
-      name: "Administrator",
+      name: input.name,
       password: hashedPassword,
-      role: "ADMIN",
-      mustChangePassword: true,
+      role: input.role,
+      mustChangePassword: false,
       isActive: true,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      tokenVersion: { increment: 1 },
     },
     create: {
-      name: "Administrator",
-      email: adminEmail!,
+      name: input.name,
+      email: input.email,
       password: hashedPassword,
-      role: "ADMIN",
-      mustChangePassword: true,
+      role: input.role,
+      mustChangePassword: false,
       isActive: true,
     },
   });
+}
 
-  console.log(`Seed completed: admin user ready (${adminEmail}).`);
-  console.log("Change the password after first login.");
+async function main() {
+  await upsertUser({
+    email: adminEmail,
+    name: "Administrator",
+    password: adminPassword,
+    role: "ADMIN",
+  });
+
+  await upsertUser({
+    email: securityEmail,
+    name: "Security",
+    password: securityPassword,
+    role: "SECURITY",
+  });
+
+  console.log(`Seed completed:`);
+  console.log(`  ADMIN    → ${adminEmail} / ${adminPassword}`);
+  console.log(`  SECURITY → ${securityEmail} / ${securityPassword}`);
 }
 
 main()

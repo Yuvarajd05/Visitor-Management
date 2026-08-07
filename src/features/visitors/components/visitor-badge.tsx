@@ -100,12 +100,12 @@ function setVisitorPassPageStyle(enabled: boolean) {
       : document.createElement("style");
 
   style.id = PAGE_STYLE_ID;
-  // Envelope C5 — the paper size used for Invenger visitor passes.
+  // Envelope C5 — inset a bit so card side borders aren't clipped by the printer.
   style.textContent = `
     @media print {
       @page {
         size: C5;
-        margin: 8mm;
+        margin: 10mm;
       }
     }
   `;
@@ -134,14 +134,9 @@ export function VisitorBadge({ visitor }: VisitorBadgeProps) {
   function handlePrint() {
     setVisitorPassPageStyle(true);
     document.body.classList.add("printing-visitor-pass");
-    try {
-      window.print();
-    } finally {
-      window.setTimeout(() => {
-        document.body.classList.remove("printing-visitor-pass");
-        setVisitorPassPageStyle(false);
-      }, 0);
-    }
+    // Keep print styles until afterprint — Chrome reflows the preview if we
+    // strip page size / visibility rules while the dialog is still open.
+    window.print();
   }
 
   const passNumber =
@@ -240,17 +235,23 @@ export function VisitorBadge({ visitor }: VisitorBadgeProps) {
               <div className="space-y-0.5">
                 <FieldRow label="Name" value={visitor.fullName} />
                 <FieldRow label="Company/Firm" value={visitor.company} />
-                <FieldRow label="Address" value="" />
+                <FieldRow label="Address" value={visitor.address} />
                 <FieldRow
                   label="Visiting to"
                   value={visitor.personToMeet}
                   uppercase={false}
                 />
                 <FieldRow label="Mobile" value={visitor.phone} />
-                <FieldRow label="Dept./Project" value="" />
+                <FieldRow
+                  label="Vehicle No."
+                  value={visitor.vehicleNumber?.trim() || ""}
+                />
                 <FieldRow label="Visiting Reason" value={visitor.purpose} />
-                <FieldRow label="Reason" value={visitor.purpose} />
-                <FieldRow label="Additional Members" value="" />
+                <FieldRow
+                  label="Additional Members"
+                  value={String(visitor.additionalMembers ?? 0)}
+                  uppercase={false}
+                />
               </div>
             </div>
 

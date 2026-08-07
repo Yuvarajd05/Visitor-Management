@@ -201,8 +201,13 @@ export function VisitorDetailContent({ visitorId }: VisitorDetailContentProps) {
             <DetailItem label="Full Name" value={visitor.fullName} />
             <DetailItem label="Phone" value={visitor.phone} />
             <DetailItem label="Company" value={visitor.company} />
+            <DetailItem label="Address" value={visitor.address} />
             <DetailItem label="Person To Meet" value={visitor.personToMeet} />
             <DetailItem label="Purpose" value={visitor.purpose} />
+            <DetailItem
+              label="Additional Members"
+              value={String(visitor.additionalMembers ?? 0)}
+            />
           </CardContent>
         </Card>
 
@@ -214,6 +219,7 @@ export function VisitorDetailContent({ visitorId }: VisitorDetailContentProps) {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <DetailItem label="ID Proof Type" value={visitor.idProofType} />
             <DetailItem label="ID Proof Number" value={visitor.idProofNumber} />
+            <DetailItem label="Vehicle Type" value={visitor.vehicleType} />
             <DetailItem label="Vehicle Number" value={visitor.vehicleNumber} />
             <DetailItem
               label="Check-In Time"
