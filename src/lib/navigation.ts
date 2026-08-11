@@ -22,7 +22,7 @@ export const navigationItems: NavItem[] = [
     href: "/visitors",
     icon: UserPlus,
   },
-  // Employees directory — not used for Person to Meet yet; re-enable when wired up.
+  // Employees directory — hidden. Person to Meet stays a hardcoded list for the print pass.
   // {
   //   title: "Employees",
   //   href: "/employees",

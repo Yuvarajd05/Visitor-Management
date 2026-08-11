@@ -1,6 +1,5 @@
 import { APP_NAME } from "@/lib/constants";
 import { getAppBaseUrl, sendMail } from "@/server/mail";
-import { prisma } from "@/server/prisma/client";
 import { getSystemSettings } from "@/server/services/settings.service";
 import { getHostEmail, type VisitorWithCreator } from "@/types/visitor";
 
@@ -25,21 +24,8 @@ function formatWhen(value: Date | string | null | undefined): string {
 }
 
 async function resolveHostEmail(personToMeet: string): Promise<string | null> {
-  const configured = getHostEmail(personToMeet);
-  if (configured) {
-    return configured;
-  }
-
-  const employee = await prisma.employee.findFirst({
-    where: {
-      fullName: { equals: personToMeet.trim(), mode: "insensitive" },
-      isActive: true,
-      email: { not: null },
-    },
-    select: { email: true },
-  });
-
-  return employee?.email ?? null;
+  // Employees directory is disabled for now — only hardcoded HOST_CONTACTS emails.
+  return getHostEmail(personToMeet);
 }
 
 function buildVisitorEventContent(

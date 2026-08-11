@@ -123,8 +123,9 @@ export type VisitingPurposeOption = (typeof VISITING_PURPOSE_OPTIONS)[number];
 export const PURPOSE_OTHER_OPTION = "Other" as const;
 
 /**
- * Host contacts for "Person to Meet" (required dropdown).
- * Empty email skips host notification until addresses are provided.
+ * Hardcoded "Person to Meet" options for the visitor form and print pass.
+ * Employees directory is unused for now — edit this list when hosts change.
+ * Empty email skips host notification.
  */
 export const HOST_CONTACTS = [
   { name: "Ramraj Duraisamy", email: "" },

@@ -133,7 +133,6 @@ export async function getDashboardData(
     visitorsToday,
     visitorsInside,
     checkedOutToday,
-    totalEmployees,
     activeUsers,
     visitorsThisWeek,
     visitorsThisMonth,
@@ -153,7 +152,6 @@ export async function getDashboardData(
         checkOutTime: { gte: todayStart, lte: todayEnd },
       },
     }),
-    prisma.employee.count(),
     prisma.user.count({ where: { isActive: true } }),
     prisma.visitor.count({
       where: { checkInTime: { gte: weekStart, lte: todayEnd } },
@@ -269,7 +267,8 @@ export async function getDashboardData(
       visitorsToday,
       visitorsInside,
       checkedOutToday,
-      totalEmployees,
+      // Employees module is hidden; keep field for API shape compatibility.
+      totalEmployees: 0,
       activeUsers,
       visitorsThisWeek,
       visitorsThisMonth,

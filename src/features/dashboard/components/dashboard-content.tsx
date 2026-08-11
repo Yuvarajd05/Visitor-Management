@@ -11,7 +11,6 @@ import {
   UserCheck,
   UserPlus,
   Users,
-  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -147,12 +146,13 @@ export function DashboardContent() {
           description: "Completed visits today",
           icon: LogOut,
         },
-        {
-          title: "Employees",
-          value: data.stats.totalEmployees,
-          description: "Total employee records",
-          icon: UsersRound,
-        },
+        // Employees module hidden — Person to Meet is a hardcoded list for the pass.
+        // {
+        //   title: "Employees",
+        //   value: data.stats.totalEmployees,
+        //   description: "Total employee records",
+        //   icon: UsersRound,
+        // },
         {
           title: "Active Users",
           value: data.stats.activeUsers,
@@ -321,7 +321,7 @@ export function DashboardContent() {
                 View all visitors
               </Button>
             </Link>
-            {/* Employees — hidden for now until Person to Meet uses this directory
+            {/* Employees module hidden — Person to Meet is hardcoded for the print pass.
             <Link href="/employees">
               <Button variant="outline" className="w-full justify-start gap-2">
                 <UsersRound className="size-4 text-secondary" />
