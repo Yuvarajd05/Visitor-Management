@@ -124,15 +124,13 @@ export async function getDashboardData(
   const todayEnd = endOfDay(now);
   const weekStart = startOfDay(addDays(todayStart, -6));
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const chartStart =
-    range.preset === "custom" || range.preset === "thismonth"
-      ? range.start
-      : weekStart;
+  // Charts and range stats always follow the selected filter.
+  const chartStart = range.start;
 
   const [
-    visitorsToday,
+    visitorsInRange,
     visitorsInside,
-    checkedOutToday,
+    checkedOutInRange,
     activeUsers,
     visitorsThisWeek,
     visitorsThisMonth,
@@ -143,13 +141,13 @@ export async function getDashboardData(
     todayVisitors,
   ] = await Promise.all([
     prisma.visitor.count({
-      where: { checkInTime: { gte: todayStart, lte: todayEnd } },
+      where: { checkInTime: { gte: range.start, lte: range.end } },
     }),
     prisma.visitor.count({ where: { status: "CHECKED_IN" } }),
     prisma.visitor.count({
       where: {
         status: "CHECKED_OUT",
-        checkOutTime: { gte: todayStart, lte: todayEnd },
+        checkOutTime: { gte: range.start, lte: range.end },
       },
     }),
     prisma.user.count({ where: { isActive: true } }),
@@ -264,9 +262,10 @@ export async function getDashboardData(
       end: range.end.toISOString(),
     },
     stats: {
-      visitorsToday,
+      // visitorsToday / checkedOutToday now reflect the selected range.
+      visitorsToday: visitorsInRange,
       visitorsInside,
-      checkedOutToday,
+      checkedOutToday: checkedOutInRange,
       // Employees module is hidden; keep field for API shape compatibility.
       totalEmployees: 0,
       activeUsers,

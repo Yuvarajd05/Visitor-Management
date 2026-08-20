@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CarFront,
@@ -10,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useForm, type Resolver } from "react-hook-form";
+import { toast } from "sonner";
 
 import {
   ID_PROOF_TYPES,
@@ -19,8 +26,10 @@ import {
   VEHICLE_TYPE_OPTIONS,
   VEHICLE_TYPE_OTHER_OPTION,
   VISITING_PURPOSE_OPTIONS,
+  type VisitorPhoneLookupMatch,
 } from "@/types/visitor";
 import { VisitorPhotoCapture } from "@/features/visitors/components/visitor-photo-capture";
+import { lookupVisitorsByPhone } from "@/features/visitors/lib/visitor-api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,7 +52,10 @@ import {
   createVisitorSchema,
   type CreateVisitorFormValues,
 } from "@/server/validation/visitor";
+import { formatDateTime } from "@/lib/date";
+import { parsePhoneValue, phonesMatch } from "@/lib/country-codes";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/server/utils/errors";
 
 const ID_PROOF_NONE = "None";
 const VEHICLE_TYPE_NONE = "None";
@@ -73,6 +85,7 @@ const emptyValues: CreateVisitorFormValues = {
   vehicleNumber: "",
   additionalMembers: 0,
   photoDataUrl: undefined,
+  reusePhotoFromVisitorId: undefined,
 };
 
 function resolvePurposeChoice(purpose: string | undefined): string | null {
@@ -214,6 +227,17 @@ export function VisitorForm({
   const [otherVehicleType, setOtherVehicleType] = useState(
     resolveOtherVehicleType(initialVehicleType),
   );
+  const [phoneMatches, setPhoneMatches] = useState<VisitorPhoneLookupMatch[]>(
+    [],
+  );
+  const [isLookingUpPhone, setIsLookingUpPhone] = useState(false);
+  const [pendingConfirmMatch, setPendingConfirmMatch] =
+    useState<VisitorPhoneLookupMatch | null>(null);
+  const [appliedMatch, setAppliedMatch] =
+    useState<VisitorPhoneLookupMatch | null>(null);
+  const [reusedPhotoUrl, setReusedPhotoUrl] = useState<string | null>(null);
+  const [dismissedMatchId, setDismissedMatchId] = useState<string | null>(null);
+  const lookupRequestId = useRef(0);
 
   const {
     register,
@@ -234,6 +258,91 @@ export function VisitorForm({
   const photoDataUrl = watch("photoDataUrl");
   const phone = watch("phone");
   const additionalMembers = watch("additionalMembers") ?? 0;
+  const photoPreviewUrl = existingPhotoUrl ?? reusedPhotoUrl;
+
+  function applyReturningVisitor(match: VisitorPhoneLookupMatch) {
+    setValue("fullName", match.fullName, { shouldValidate: true });
+    // Normalize legacy 10-digit phones to E.164 so the form matches new entries.
+    setValue("phone", parsePhoneValue(match.phone).e164 || match.phone, {
+      shouldValidate: true,
+    });
+    setValue("company", match.company ?? "", { shouldValidate: true });
+    setValue("address", match.address ?? "", { shouldValidate: true });
+
+    const safeIdProofType =
+      match.idProofType &&
+      (ID_PROOF_TYPES as readonly string[]).includes(match.idProofType)
+        ? (match.idProofType as CreateVisitorFormValues["idProofType"])
+        : undefined;
+    setValue("idProofType", safeIdProofType, { shouldValidate: true });
+    setValue("idProofNumber", match.idProofNumber ?? "", {
+      shouldValidate: true,
+    });
+    setValue("vehicleNumber", match.vehicleNumber ?? "", {
+      shouldValidate: true,
+    });
+    setValue("additionalMembers", match.additionalMembers ?? 0, {
+      shouldValidate: true,
+    });
+    setValue("photoDataUrl", undefined, { shouldValidate: true });
+
+    const purposeChoiceResolved =
+      resolvePurposeChoice(match.purpose) ?? PURPOSE_OTHER_OPTION;
+    const otherPurposeResolved = resolveOtherPurpose(match.purpose);
+    applyPurposeChoice(purposeChoiceResolved, otherPurposeResolved);
+    if (purposeChoiceResolved === PURPOSE_OTHER_OPTION) {
+      setOtherPurpose(otherPurposeResolved);
+      setValue("purpose", match.purpose, { shouldValidate: true });
+    }
+
+    const personChoiceResolved =
+      resolvePersonToMeetChoice(match.personToMeet) ??
+      PERSON_TO_MEET_OTHER_OPTION;
+    const otherPersonResolved = resolveOtherPersonToMeet(match.personToMeet);
+    applyPersonToMeetChoice(personChoiceResolved, otherPersonResolved);
+    if (personChoiceResolved === PERSON_TO_MEET_OTHER_OPTION) {
+      setOtherPersonToMeet(otherPersonResolved);
+      setValue("personToMeet", match.personToMeet, { shouldValidate: true });
+    }
+
+    const vehicleChoiceResolved = resolveVehicleTypeChoice(
+      match.vehicleType ?? undefined,
+    );
+    const otherVehicleResolved = resolveOtherVehicleType(
+      match.vehicleType ?? undefined,
+    );
+    applyVehicleTypeChoice(vehicleChoiceResolved, otherVehicleResolved);
+    if (vehicleChoiceResolved === VEHICLE_TYPE_OTHER_OPTION) {
+      setOtherVehicleType(otherVehicleResolved);
+      setValue("vehicleType", match.vehicleType ?? undefined, {
+        shouldValidate: true,
+      });
+    }
+
+    if (match.photoUrl) {
+      setReusedPhotoUrl(match.photoUrl);
+      setValue("reusePhotoFromVisitorId", match.id, { shouldValidate: false });
+    } else {
+      setReusedPhotoUrl(null);
+      setValue("reusePhotoFromVisitorId", undefined, { shouldValidate: false });
+    }
+
+    setAppliedMatch(match);
+    setPendingConfirmMatch(null);
+    setPhoneMatches([]);
+    toast.success(`Loaded details for ${match.fullName} from a previous visit.`);
+  }
+
+  function declineReturningVisitor() {
+    if (pendingConfirmMatch) {
+      setDismissedMatchId(pendingConfirmMatch.id);
+    }
+    setPendingConfirmMatch(null);
+  }
+
+  function askToFillReturningVisitor(match: VisitorPhoneLookupMatch) {
+    setPendingConfirmMatch(match);
+  }
 
   useEffect(() => {
     if (!defaultValues?.purpose) {
@@ -261,6 +370,80 @@ export function VisitorForm({
     );
     setOtherVehicleType(resolveOtherVehicleType(defaultValues?.vehicleType));
   }, [defaultValues?.vehicleType]);
+
+  useEffect(() => {
+    if (isEdit) {
+      return;
+    }
+
+    const digits = (phone ?? "").replace(/\D/g, "");
+    if (digits.length < 4) {
+      setPhoneMatches([]);
+      setPendingConfirmMatch(null);
+      setIsLookingUpPhone(false);
+      setDismissedMatchId(null);
+      return;
+    }
+
+    if (appliedMatch && phonesMatch(appliedMatch.phone, phone)) {
+      return;
+    }
+
+    const requestId = ++lookupRequestId.current;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          setIsLookingUpPhone(true);
+          const result = await lookupVisitorsByPhone(digits);
+          if (requestId !== lookupRequestId.current) {
+            return;
+          }
+
+          setPhoneMatches(result.matches);
+
+          const exact = result.matches.find((match) =>
+            phonesMatch(match.phone, phone),
+          );
+          const preferred =
+            exact ??
+            (result.matches.length === 1 && digits.length >= 8
+              ? result.matches[0]
+              : null);
+
+          // Never autofill — only offer a Yes/No confirm prompt.
+          if (
+            preferred &&
+            preferred.id !== dismissedMatchId &&
+            appliedMatch?.id !== preferred.id &&
+            pendingConfirmMatch?.id !== preferred.id
+          ) {
+            setPendingConfirmMatch(preferred);
+          } else if (!preferred || preferred.id === dismissedMatchId) {
+            if (!preferred) {
+              setPendingConfirmMatch(null);
+            }
+          }
+        } catch (error) {
+          if (requestId === lookupRequestId.current) {
+            setPhoneMatches([]);
+            setPendingConfirmMatch(null);
+            if (digits.length >= 10) {
+              toast.error(getErrorMessage(error));
+            }
+          }
+        } finally {
+          if (requestId === lookupRequestId.current) {
+            setIsLookingUpPhone(false);
+          }
+        }
+      })();
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone, isEdit, dismissedMatchId]);
 
   function applyPurposeChoice(choice: string, customText = otherPurpose) {
     setPurposeChoice(choice);
@@ -316,7 +499,14 @@ export function VisitorForm({
   async function handleFormSubmit(values: CreateVisitorFormValues) {
     try {
       setIsSubmitting(true);
-      await onSubmit(values);
+      const payload: CreateVisitorFormValues = {
+        ...values,
+        reusePhotoFromVisitorId:
+          values.photoDataUrl || !values.reusePhotoFromVisitorId
+            ? undefined
+            : values.reusePhotoFromVisitorId,
+      };
+      await onSubmit(payload);
     } finally {
       setIsSubmitting(false);
     }
@@ -332,9 +522,15 @@ export function VisitorForm({
     setOtherPersonToMeet(resolveOtherPersonToMeet(nextPersonToMeet));
     setVehicleTypeChoice(resolveVehicleTypeChoice(nextVehicleType));
     setOtherVehicleType(resolveOtherVehicleType(nextVehicleType));
+    setPhoneMatches([]);
+    setAppliedMatch(null);
+    setPendingConfirmMatch(null);
+    setDismissedMatchId(null);
+    setReusedPhotoUrl(null);
     reset({
       ...emptyValues,
       ...defaultValues,
+      reusePhotoFromVisitorId: undefined,
     });
   }
 
@@ -347,7 +543,7 @@ export function VisitorForm({
         <CardDescription>
           {isEdit
             ? "Update visitor details. Visitor code and check-in time cannot be changed."
-            : "Fill in the sections below. Required fields are marked with *."}
+            : "Start with the phone number. If the guest visited before, you can choose to fill their saved details. Required fields are marked with *."}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -381,10 +577,125 @@ export function VisitorForm({
                 invalid={Boolean(errors.phone)}
                 onChange={(next) => {
                   setValue("phone", next, { shouldValidate: true });
+                  setDismissedMatchId(null);
+                  if (appliedMatch) {
+                    const nextDigits = next.replace(/\D/g, "");
+                    const appliedNational = appliedMatch.phone
+                      .replace(/\D/g, "")
+                      .slice(-10);
+                    const stillSame =
+                      Boolean(nextDigits) &&
+                      (phonesMatch(appliedMatch.phone, next) ||
+                        appliedNational.startsWith(nextDigits) ||
+                        nextDigits.endsWith(appliedNational) ||
+                        appliedNational.includes(nextDigits));
+                    if (!stillSame) {
+                      setAppliedMatch(null);
+                    }
+                  }
+                  if (pendingConfirmMatch) {
+                    const nextDigits = next.replace(/\D/g, "");
+                    const pendingNational = pendingConfirmMatch.phone
+                      .replace(/\D/g, "")
+                      .slice(-10);
+                    const stillSame =
+                      Boolean(nextDigits) &&
+                      (phonesMatch(pendingConfirmMatch.phone, next) ||
+                        pendingNational.startsWith(nextDigits) ||
+                        nextDigits.includes(pendingNational) ||
+                        pendingNational.includes(nextDigits));
+                    if (!stillSame) {
+                      setPendingConfirmMatch(null);
+                    }
+                  }
                 }}
               />
               {errors.phone ? (
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
+              ) : null}
+              {!isEdit ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Type the mobile number to check for a returning visitor.
+                    {isLookingUpPhone ? " Searching…" : null}
+                  </p>
+                  {appliedMatch ? (
+                    <p className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800">
+                      Returning visitor loaded: <b>{appliedMatch.fullName}</b>
+                      {appliedMatch.visitorCode
+                        ? ` (${appliedMatch.visitorCode})`
+                        : ""}
+                      . Review fields and save a new check-in.
+                    </p>
+                  ) : null}
+                  {!appliedMatch && pendingConfirmMatch ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">
+                      <p>
+                        Found previous visitor{" "}
+                        <b>{pendingConfirmMatch.fullName}</b>
+                        {pendingConfirmMatch.company
+                          ? ` (${pendingConfirmMatch.company})`
+                          : ""}
+                        .
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80">
+                        Last visit{" "}
+                        {formatDateTime(pendingConfirmMatch.lastVisitAt)}. Fill
+                        the form with their saved details?
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-secondary hover:bg-secondary/90"
+                          onClick={() =>
+                            applyReturningVisitor(pendingConfirmMatch)
+                          }
+                        >
+                          Yes, fill details
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={declineReturningVisitor}
+                        >
+                          No, enter manually
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  {!appliedMatch &&
+                  !pendingConfirmMatch &&
+                  phoneMatches.length > 1 ? (
+                    <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
+                      <p className="border-b border-border bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+                        Multiple matches — choose one to confirm fill
+                      </p>
+                      <ul className="max-h-48 divide-y divide-border overflow-y-auto">
+                        {phoneMatches.map((match) => (
+                          <li key={match.id}>
+                            <button
+                              type="button"
+                              className="flex w-full flex-col gap-0.5 px-2.5 py-2 text-left text-sm hover:bg-accent"
+                              onClick={() => askToFillReturningVisitor(match)}
+                            >
+                              <span className="font-medium text-foreground">
+                                {match.fullName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {match.phone}
+                                {match.company ? ` · ${match.company}` : ""}
+                                {" · Last visit "}
+                                {formatDateTime(match.lastVisitAt)}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
@@ -700,10 +1011,19 @@ export function VisitorForm({
           <section className="rounded-xl border border-border/70 bg-slate-50/60 p-4 md:p-5">
             <VisitorPhotoCapture
               value={photoDataUrl}
-              existingPhotoUrl={existingPhotoUrl}
+              existingPhotoUrl={photoPreviewUrl}
               onChange={(dataUrl) => {
                 setValue("photoDataUrl", dataUrl, { shouldValidate: true });
-                if (!dataUrl) {
+                if (dataUrl) {
+                  setValue("reusePhotoFromVisitorId", undefined, {
+                    shouldValidate: false,
+                  });
+                  setReusedPhotoUrl(null);
+                } else {
+                  setReusedPhotoUrl(null);
+                  setValue("reusePhotoFromVisitorId", undefined, {
+                    shouldValidate: false,
+                  });
                   onExistingPhotoCleared?.();
                 }
               }}

@@ -32,10 +32,16 @@ import { getErrorMessage } from "@/server/utils/errors";
 type StatusFilter = "ALL" | "CHECKED_IN" | "CHECKED_OUT";
 type SortableColumn = "checkInTime" | "fullName" | "visitorCode";
 
-export function VisitorListContent() {
+interface VisitorListContentProps {
+  initialStatus?: StatusFilter;
+}
+
+export function VisitorListContent({
+  initialStatus = "ALL",
+}: VisitorListContentProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("ALL");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortableColumn>("checkInTime");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -47,6 +53,11 @@ export function VisitorListContent() {
   const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VisitorListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+    setPage(1);
+  }, [initialStatus]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

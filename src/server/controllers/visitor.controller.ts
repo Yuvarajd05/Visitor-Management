@@ -14,6 +14,7 @@ import {
   deleteVisitor,
   getVisitorById,
   listVisitors,
+  lookupVisitorsByPhone,
   updateVisitor,
 } from "@/server/services/visitor.service";
 import {
@@ -21,6 +22,7 @@ import {
   updateVisitorSchema,
   visitorIdParamSchema,
   visitorListQuerySchema,
+  visitorPhoneLookupQuerySchema,
 } from "@/server/validation/visitor";
 
 export async function listVisitorsController(request: Request) {
@@ -30,6 +32,16 @@ export async function listVisitorsController(request: Request) {
     new URL(request.url).searchParams,
   );
   const result = await listVisitors(query);
+  return apiSuccess(result);
+}
+
+export async function lookupVisitorsByPhoneController(request: Request) {
+  await requireApiUser();
+  const query = parseSearchParams(
+    visitorPhoneLookupQuerySchema,
+    new URL(request.url).searchParams,
+  );
+  const result = await lookupVisitorsByPhone(query.phone);
   return apiSuccess(result);
 }
 

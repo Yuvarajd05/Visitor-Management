@@ -153,6 +153,53 @@ export async function deleteVisitorRecord(id: string, db: DbClient = prisma) {
   return db.visitor.delete({ where: { id } });
 }
 
+const visitorLookupSelect = {
+  id: true,
+  visitorCode: true,
+  fullName: true,
+  phone: true,
+  company: true,
+  address: true,
+  purpose: true,
+  personToMeet: true,
+  idProofType: true,
+  idProofNumber: true,
+  vehicleType: true,
+  vehicleNumber: true,
+  additionalMembers: true,
+  photoUrl: true,
+  checkInTime: true,
+} satisfies Prisma.VisitorSelect;
+
+/**
+ * Finds recent visitors whose phone contains any of the digit variants
+ * (supports legacy numbers stored without +91).
+ */
+export async function findVisitorsByPhoneDigits(
+  digitVariants: string[],
+  take = 40,
+  db: DbClient = prisma,
+) {
+  const variants = digitVariants
+    .map((value) => value.replace(/\D/g, ""))
+    .filter((value) => value.length >= 4);
+
+  if (variants.length === 0) {
+    return [];
+  }
+
+  return db.visitor.findMany({
+    where: {
+      OR: variants.map((digits) => ({
+        phone: { contains: digits },
+      })),
+    },
+    orderBy: { checkInTime: "desc" },
+    take,
+    select: visitorLookupSelect,
+  });
+}
+
 export async function runVisitorTransaction<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {

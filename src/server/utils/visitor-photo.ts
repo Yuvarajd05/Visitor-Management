@@ -1,4 +1,4 @@
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { copyFile, mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 
 import { ValidationError } from "@/server/api/errors";
@@ -54,6 +54,24 @@ export function getVisitorPhotoAbsolutePath(filename: string): string {
   return path.join(UPLOAD_DIR, path.basename(filename));
 }
 
+function resolveManagedPhotoPath(photoUrl: string): string | null {
+  const isManaged =
+    photoUrl.startsWith(PUBLIC_URL_PREFIX) ||
+    photoUrl.startsWith(LEGACY_URL_PREFIX);
+
+  if (!isManaged) {
+    return null;
+  }
+
+  const filename = path.basename(photoUrl);
+
+  if (photoUrl.startsWith(PUBLIC_URL_PREFIX)) {
+    return path.join(UPLOAD_DIR, filename);
+  }
+
+  return path.join(process.cwd(), "public", "uploads", "visitors", filename);
+}
+
 export async function saveVisitorPhotoFromDataUrl(
   visitorId: string,
   dataUrl: string,
@@ -86,6 +104,30 @@ export async function saveVisitorPhotoFromDataUrl(
   return `${PUBLIC_URL_PREFIX}${filename}`;
 }
 
+/** Copy a previous visitor photo onto a new visitor id (returning-guest flow). */
+export async function copyVisitorPhotoFromUrl(
+  visitorId: string,
+  sourcePhotoUrl: string,
+): Promise<string | null> {
+  const sourcePath = resolveManagedPhotoPath(sourcePhotoUrl);
+  if (!sourcePath) {
+    return null;
+  }
+
+  const ext = path.extname(sourcePath) || ".jpg";
+  const filename = `${visitorId}${ext}`;
+  const destPath = path.join(UPLOAD_DIR, filename);
+
+  try {
+    await mkdir(UPLOAD_DIR, { recursive: true });
+    await copyFile(sourcePath, destPath);
+  } catch {
+    return null;
+  }
+
+  return `${PUBLIC_URL_PREFIX}${filename}`;
+}
+
 export async function deleteVisitorPhotoFile(
   photoUrl: string | null | undefined,
 ): Promise<void> {
@@ -93,23 +135,26 @@ export async function deleteVisitorPhotoFile(
     return;
   }
 
-  const isManaged =
-    photoUrl.startsWith(PUBLIC_URL_PREFIX) ||
-    photoUrl.startsWith(LEGACY_URL_PREFIX);
-
-  if (!isManaged) {
+  const filePath = resolveManagedPhotoPath(photoUrl);
+  if (!filePath) {
     return;
   }
 
-  const filename = path.basename(photoUrl);
   const candidates = [
-    path.join(UPLOAD_DIR, filename),
-    path.join(process.cwd(), "public", "uploads", "visitors", filename),
+    filePath,
+    path.join(UPLOAD_DIR, path.basename(photoUrl)),
+    path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      "visitors",
+      path.basename(photoUrl),
+    ),
   ];
 
-  for (const filePath of candidates) {
+  for (const candidate of candidates) {
     try {
-      await unlink(filePath);
+      await unlink(candidate);
     } catch {
       // File may already be missing.
     }

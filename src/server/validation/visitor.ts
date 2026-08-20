@@ -154,6 +154,8 @@ export const createVisitorSchema = z.object({
   vehicleNumber: optionalVehicleSchema,
   additionalMembers: z.coerce.number().int().min(0).max(10).default(0),
   photoDataUrl: optionalPhotoDataUrlSchema,
+  /** Reuse photo from a previous visit when registering a returning guest. */
+  reusePhotoFromVisitorId: z.string().trim().min(1).optional(),
 });
 
 export const updateVisitorSchema = z.object({
@@ -239,6 +241,24 @@ export const visitorIdParamSchema = z.object({
   id: z.string().trim().min(1, "Visitor ID is required"),
 });
 
+/** Phone lookup for returning visitors (partial or full). Min 4 digits. */
+export const visitorPhoneLookupQuerySchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone is required")
+    .transform((value) => value.replace(/\D/g, ""))
+    .refine((digits) => digits.length >= 4, {
+      message: "Enter at least 4 digits to search",
+    })
+    .refine((digits) => digits.length <= 15, {
+      message: "Phone search is too long",
+    }),
+});
+
 export type CreateVisitorFormValues = z.infer<typeof createVisitorSchema>;
 export type UpdateVisitorFormValues = z.infer<typeof updateVisitorSchema>;
 export type VisitorListQueryValues = z.infer<typeof visitorListQuerySchema>;
+export type VisitorPhoneLookupQueryValues = z.infer<
+  typeof visitorPhoneLookupQuerySchema
+>;

@@ -75,6 +75,30 @@ export interface CreateVisitorInput {
   vehicleNumber?: string;
   additionalMembers?: number;
   photoDataUrl?: string;
+  reusePhotoFromVisitorId?: string;
+}
+
+export interface VisitorPhoneLookupMatch {
+  id: string;
+  visitorCode: string;
+  fullName: string;
+  phone: string;
+  company: string | null;
+  address: string | null;
+  purpose: string;
+  personToMeet: string;
+  idProofType: string | null;
+  idProofNumber: string | null;
+  vehicleType: string | null;
+  vehicleNumber: string | null;
+  additionalMembers: number;
+  photoUrl: string | null;
+  lastVisitAt: Date;
+}
+
+export interface VisitorPhoneLookupResult {
+  matches: VisitorPhoneLookupMatch[];
+  digits: string;
 }
 
 export interface UpdateVisitorInput {

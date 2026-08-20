@@ -2,6 +2,7 @@ import { parseApiResponse } from "@/lib/parse-api-response";
 import type {
   VisitorListItem,
   VisitorListResult,
+  VisitorPhoneLookupResult,
   VisitorWithCreator,
 } from "@/types/visitor";
 import type {
@@ -28,6 +29,15 @@ export async function fetchVisitors(
 ): Promise<VisitorListResult> {
   const response = await fetch(`/api/visitors${buildQueryString(query)}`);
   return parseApiResponse<VisitorListResult>(response);
+}
+
+/** Lookup returning visitors by partial or full phone digits. */
+export async function lookupVisitorsByPhone(
+  phone: string,
+): Promise<VisitorPhoneLookupResult> {
+  const params = new URLSearchParams({ phone });
+  const response = await fetch(`/api/visitors/lookup?${params.toString()}`);
+  return parseApiResponse<VisitorPhoneLookupResult>(response);
 }
 
 export async function fetchVisitor(id: string): Promise<VisitorWithCreator> {

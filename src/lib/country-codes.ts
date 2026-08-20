@@ -258,3 +258,45 @@ export function isValidPhoneValue(value: string): boolean {
 export function nationalNumberMaxLength(iso: string): number {
   return iso === "IN" ? 10 : 12;
 }
+
+/**
+ * Digit-only variants for looking up phones stored with or without country code.
+ * Example: "919876543210" → also searches "9876543210" (legacy India rows).
+ */
+export function phoneLookupDigitVariants(rawDigits: string): string[] {
+  const digits = rawDigits.replace(/\D/g, "");
+  if (digits.length < 4) {
+    return [];
+  }
+
+  const variants = new Set<string>([digits]);
+
+  if (digits.startsWith("91") && digits.length > 10) {
+    variants.add(digits.slice(2));
+  }
+
+  if (digits.length > 10) {
+    variants.add(digits.slice(-10));
+  }
+
+  return Array.from(variants).filter((value) => value.length >= 4);
+}
+
+/** True when two phone values refer to the same number (with/without +91). */
+export function phonesMatch(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): boolean {
+  const a = (left ?? "").replace(/\D/g, "");
+  const b = (right ?? "").replace(/\D/g, "");
+  if (!a || !b) {
+    return false;
+  }
+  if (a === b) {
+    return true;
+  }
+  if (a.length >= 10 && b.length >= 10) {
+    return a.slice(-10) === b.slice(-10);
+  }
+  return a.endsWith(b) || b.endsWith(a);
+}

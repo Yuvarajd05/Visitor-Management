@@ -72,6 +72,73 @@ const RANGE_OPTIONS: Array<{ value: DashboardRangePreset; label: string }> = [
   { value: "custom", label: "Custom Range" },
 ];
 
+const RANGE_ITEMS = Object.fromEntries(
+  RANGE_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<DashboardRangePreset, string>;
+
+function rangeVisitorsTitle(preset: DashboardRangePreset): string {
+  switch (preset) {
+    case "yesterday":
+      return "Yesterday's Visitors";
+    case "last7days":
+      return "Last 7 Days Visitors";
+    case "thismonth":
+      return "This Month's Visitors";
+    case "custom":
+      return "Visitors in Range";
+    case "today":
+    default:
+      return "Today's Visitors";
+  }
+}
+
+function rangeCheckoutTitle(preset: DashboardRangePreset): string {
+  switch (preset) {
+    case "yesterday":
+      return "Checked Out Yesterday";
+    case "last7days":
+      return "Checked Out (7 Days)";
+    case "thismonth":
+      return "Checked Out (Month)";
+    case "custom":
+      return "Checked Out in Range";
+    case "today":
+    default:
+      return "Checked Out Today";
+  }
+}
+
+function rangeVisitorsDescription(preset: DashboardRangePreset): string {
+  switch (preset) {
+    case "yesterday":
+      return "Registered yesterday";
+    case "last7days":
+      return "Check-ins in the last 7 days";
+    case "thismonth":
+      return "Check-ins this month";
+    case "custom":
+      return "Check-ins in selected dates";
+    case "today":
+    default:
+      return "Registered today";
+  }
+}
+
+function rangeCheckoutDescription(preset: DashboardRangePreset): string {
+  switch (preset) {
+    case "yesterday":
+      return "Completed visits yesterday";
+    case "last7days":
+      return "Completed visits in last 7 days";
+    case "thismonth":
+      return "Completed visits this month";
+    case "custom":
+      return "Completed visits in selected dates";
+    case "today":
+    default:
+      return "Completed visits today";
+  }
+}
 const STAT_TONES = [
   "bg-blue-50 text-blue-700 ring-blue-100",
   "bg-emerald-50 text-emerald-700 ring-emerald-100",
@@ -129,47 +196,46 @@ export function DashboardContent() {
   const stats = data
     ? [
         {
-          title: "Today's Visitors",
+          title: rangeVisitorsTitle(range),
           value: data.stats.visitorsToday,
-          description: "Registered today",
+          description: rangeVisitorsDescription(range),
           icon: Users,
+          href: "/visitors",
         },
         {
           title: "Inside Now",
           value: data.stats.visitorsInside,
           description: "Currently on premises",
           icon: Building2,
+          href: "/visitors?status=CHECKED_IN",
         },
         {
-          title: "Checked Out Today",
+          title: rangeCheckoutTitle(range),
           value: data.stats.checkedOutToday,
-          description: "Completed visits today",
+          description: rangeCheckoutDescription(range),
           icon: LogOut,
+          href: "/visitors?status=CHECKED_OUT",
         },
-        // Employees module hidden — Person to Meet is a hardcoded list for the pass.
-        // {
-        //   title: "Employees",
-        //   value: data.stats.totalEmployees,
-        //   description: "Total employee records",
-        //   icon: UsersRound,
-        // },
         {
           title: "Active Users",
           value: data.stats.activeUsers,
           description: "System accounts active",
           icon: UserCheck,
+          href: "/users",
         },
         {
           title: "This Week",
           value: data.stats.visitorsThisWeek,
           description: "Check-ins last 7 days",
           icon: CalendarDays,
+          href: "/visitors",
         },
         {
           title: "This Month",
           value: data.stats.visitorsThisMonth,
           description: "Check-ins this month",
           icon: CalendarDays,
+          href: "/visitors",
         },
       ]
     : [];
@@ -198,6 +264,7 @@ export function DashboardContent() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Select
                 value={range}
+                items={RANGE_ITEMS}
                 onValueChange={(value) => {
                   if (value) {
                     setRange(value as DashboardRangePreset);
@@ -264,34 +331,40 @@ export function DashboardContent() {
             const Icon = stat.icon;
 
             return (
-              <Card
+              <Link
                 key={stat.title}
-                className="border-border/70 bg-white/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                href={stat.href}
+                className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div>
-                    <CardDescription className="font-medium">
-                      {stat.title}
-                    </CardDescription>
-                    <CardTitle className="mt-2 text-3xl font-semibold tracking-tight">
-                      {stat.value}
-                    </CardTitle>
-                  </div>
-                  <div
-                    className={cn(
-                      "rounded-xl p-2.5 ring-1",
-                      STAT_TONES[index % STAT_TONES.length],
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {stat.description}
-                  </p>
-                </CardContent>
-              </Card>
+                <Card className="h-full cursor-pointer border-border/70 bg-white/90 shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-secondary/40 group-hover:shadow-md">
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                    <div>
+                      <CardDescription className="font-medium">
+                        {stat.title}
+                      </CardDescription>
+                      <CardTitle className="mt-2 text-3xl font-semibold tracking-tight">
+                        {stat.value}
+                      </CardTitle>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-xl p-2.5 ring-1",
+                        STAT_TONES[index % STAT_TONES.length],
+                      )}
+                    >
+                      <Icon className="size-5" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {stat.description}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-secondary opacity-0 transition-opacity group-hover:opacity-100">
+                      View details →
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>

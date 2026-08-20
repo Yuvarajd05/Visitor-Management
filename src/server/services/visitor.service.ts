@@ -6,6 +6,7 @@ import {
   checkoutVisitorIfCheckedIn,
   deleteVisitorRecord,
   findVisitorById,
+  findVisitorsByPhoneDigits,
   generateNextVisitorCode,
   listVisitorRecords,
   runVisitorTransaction,
@@ -16,6 +17,8 @@ import type {
   UpdateVisitorInput,
   VisitorListQuery,
   VisitorListResult,
+  VisitorPhoneLookupMatch,
+  VisitorPhoneLookupResult,
   VisitorWithCreator,
 } from "@/types/visitor";
 import type {
@@ -24,9 +27,11 @@ import type {
   VisitorListQueryValues,
 } from "@/server/validation/visitor";
 import {
+  copyVisitorPhotoFromUrl,
   deleteVisitorPhotoFile,
   saveVisitorPhotoFromDataUrl,
 } from "@/server/utils/visitor-photo";
+import { phoneLookupDigitVariants, phonesMatch } from "@/lib/country-codes";
 
 function buildSearchFilter(search?: string): Prisma.VisitorWhereInput | undefined {
   if (!search) {
@@ -101,18 +106,85 @@ export async function createVisitor(
 
   const photoDataUrl =
     "photoDataUrl" in input ? input.photoDataUrl : undefined;
+  const reusePhotoFromVisitorId =
+    "reusePhotoFromVisitorId" in input
+      ? input.reusePhotoFromVisitorId
+      : undefined;
 
-  if (!photoDataUrl) {
-    return visitor;
+  if (photoDataUrl) {
+    try {
+      const photoUrl = await saveVisitorPhotoFromDataUrl(
+        visitor.id,
+        photoDataUrl,
+      );
+      return await updateVisitorRecord(visitor.id, { photoUrl });
+    } catch (error) {
+      await deleteVisitorRecord(visitor.id).catch(() => undefined);
+      throw error;
+    }
   }
 
-  try {
-    const photoUrl = await saveVisitorPhotoFromDataUrl(visitor.id, photoDataUrl);
-    return await updateVisitorRecord(visitor.id, { photoUrl });
-  } catch (error) {
-    await deleteVisitorRecord(visitor.id).catch(() => undefined);
-    throw error;
+  if (reusePhotoFromVisitorId) {
+    try {
+      const source = await findVisitorById(reusePhotoFromVisitorId);
+      const samePhone = Boolean(
+        source && phonesMatch(source.phone, input.phone),
+      );
+
+      if (source?.photoUrl && samePhone) {
+        const photoUrl = await copyVisitorPhotoFromUrl(
+          visitor.id,
+          source.photoUrl,
+        );
+        if (photoUrl) {
+          return await updateVisitorRecord(visitor.id, { photoUrl });
+        }
+      }
+    } catch {
+      // Returning guest can still register without the previous photo.
+    }
   }
+
+  return visitor;
+}
+
+export async function lookupVisitorsByPhone(
+  digits: string,
+): Promise<VisitorPhoneLookupResult> {
+  const variants = phoneLookupDigitVariants(digits);
+  const rows = await findVisitorsByPhoneDigits(variants);
+  const latestByPhone = new Map<string, (typeof rows)[number]>();
+
+  for (const row of rows) {
+    const key = row.phone.replace(/\D/g, "").slice(-10) || row.phone;
+    if (!latestByPhone.has(key)) {
+      latestByPhone.set(key, row);
+    }
+  }
+
+  const matches: VisitorPhoneLookupMatch[] = Array.from(
+    latestByPhone.values(),
+  )
+    .slice(0, 8)
+    .map((row) => ({
+      id: row.id,
+      visitorCode: row.visitorCode,
+      fullName: row.fullName,
+      phone: row.phone,
+      company: row.company,
+      address: row.address,
+      purpose: row.purpose,
+      personToMeet: row.personToMeet,
+      idProofType: row.idProofType,
+      idProofNumber: row.idProofNumber,
+      vehicleType: row.vehicleType,
+      vehicleNumber: row.vehicleNumber,
+      additionalMembers: row.additionalMembers,
+      photoUrl: row.photoUrl,
+      lastVisitAt: row.checkInTime,
+    }));
+
+  return { matches, digits };
 }
 
 export async function listVisitors(
